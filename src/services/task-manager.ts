@@ -386,19 +386,32 @@ export class TaskManager {
       logger.info('歌词轮询结果', {
         taskId,
         resultKeys: Object.keys(result || {}),
-        hasData: !!result?.data,
-        dataType: Array.isArray(result?.data) ? 'array' : typeof result?.data,
-        dataLength: Array.isArray(result?.data) ? result.data.length : 'N/A'
+        hasResponse: !!result?.response,
+        responseType: typeof result?.response
       });
 
-      // 解析歌词数据 - result 已经是 {status: "SUCCESS", data: [...]} 格式
+      // 解析歌词数据 - result 结构是 {taskId, param, response, status, ...}
+      // 歌词数据在 response 字段里，可能是字符串(JSON)或对象
       let lyricsData: any[] = [];
-      if (Array.isArray(result?.data)) {
-        // result.data 直接是歌词数组
+
+      // 尝试从 response 字段获取数据
+      let responseData = result?.response;
+      if (typeof responseData === 'string') {
+        try {
+          responseData = JSON.parse(responseData);
+        } catch (e) {
+          logger.warn('解析 response 字符串失败', { taskId, response: responseData?.substring(0, 100) });
+        }
+      }
+
+      // response 可能是 {data: [...]} 或直接是数组
+      if (Array.isArray(responseData)) {
+        lyricsData = responseData;
+      } else if (responseData?.data && Array.isArray(responseData.data)) {
+        lyricsData = responseData.data;
+      } else if (result?.data && Array.isArray(result.data)) {
+        // 兼容其他格式
         lyricsData = result.data;
-      } else if (Array.isArray(result)) {
-        // result 直接是歌词数组
-        lyricsData = result;
       }
 
       logger.info('解析后的歌词数据', {
