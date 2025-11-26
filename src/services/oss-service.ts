@@ -1,10 +1,11 @@
 import axios from 'axios';
 import { logger } from '../utils/logger';
+import { httpsRequestNoSNI } from '../utils/https-no-sni';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https';
 import * as http from 'http';
-import * as crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { URL } from 'url';
 
 /**
@@ -32,43 +33,43 @@ export class OSSService {
   }
 
   /**
-   * 生成文件的 MD5 哈希值作为文件名
-   */
-  private async generateMD5FileName(filePath: string, fileExtension: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const hash = crypto.createHash('md5');
-      const stream = fs.createReadStream(filePath);
-
-      stream.on('data', (data) => hash.update(data));
-      stream.on('end', () => {
-        const md5Hash = hash.digest('hex');
-        const fileName = `${md5Hash}${fileExtension}`;
-        logger.info('生成MD5文件名', { fileName, md5: md5Hash });
-        resolve(fileName);
-      });
-      stream.on('error', reject);
-    });
-  }
-
-  /**
    * 获取预签名上传URL
+   * 使用自定义 HTTPS 请求（无 SNI）来解决 ECONNRESET 问题
    */
   private async getSignedUploadUrl(fileName: string): Promise<string> {
     try {
-      const response = await axios.post(
-        this.signedUrlApi,
-        { fileName },
-        { timeout: 10000 }
-      );
+      logger.info('请求签名上传URL', { fileName });
 
-      if (response.data?.code === 200 && response.data?.data?.signedUrl) {
-        return response.data.data.signedUrl;
+      // 构造完整的 URL（使用 GET 请求 + 查询参数）
+      const url = `${this.signedUrlApi}?fileName=${encodeURIComponent(fileName)}`;
+
+      // 使用无 SNI 的 HTTPS 请求
+      const response = await httpsRequestNoSNI(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        },
+        timeout: 10000
+      });
+
+      // 检查状态码
+      if (response.statusCode !== 200) {
+        throw new Error(`HTTP ${response.statusCode}: ${response.body}`);
       }
 
-      throw new Error('获取预签名URL失败');
+      // 获取签名 URL
+      const signedUrl = response.json?.signedUrl;
+
+      if (!signedUrl) {
+        throw new Error('签名URL响应中缺少signedUrl字段');
+      }
+
+      logger.info('获取签名URL成功', { fileName, signedUrl: signedUrl.substring(0, 50) + '...' });
+      return signedUrl;
+
     } catch (error: any) {
-      logger.error('获取预签名URL失败', { error: error.message });
-      throw error;
+      logger.error('获取签名URL失败', { fileName, error: error.message });
+      throw new Error(`获取签名URL失败: ${error.message}`);
     }
   }
 
@@ -150,10 +151,16 @@ export class OSSService {
         writer.on('error', reject);
       });
 
-      logger.info('音频文件下载完成', { tempFilePath });
+      const fileSize = fs.statSync(tempFilePath).size;
+      logger.info('音频文件下载完成', {
+        tempFilePath,
+        size: fileSize,
+        sizeMB: (fileSize / 1024 / 1024).toFixed(2) + ' MB'
+      });
 
-      // 2. 生成MD5文件名
-      const fileName = await this.generateMD5FileName(tempFilePath, fileExtension);
+      // 2. 生成唯一文件名
+      const fileName = `${uuidv4()}${fileExtension}`;
+      logger.info('生成文件名', { fileName });
 
       // 3. 获取预签名URL
       const signedUrl = await this.getSignedUploadUrl(fileName);
@@ -161,6 +168,7 @@ export class OSSService {
       // 4. 上传到OSS
       await this.uploadToOSS(signedUrl, tempFilePath);
 
+      logger.info('✅ 音频文件上传OSS成功', { fileName });
       return fileName;
     } finally {
       // 清理临时文件

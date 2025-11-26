@@ -433,6 +433,7 @@ export class TaskManager {
         };
 
         if (audioData.audio_url) {
+          // 下载音频文件并上传到 OSS
           logger.info('开始上传音频到 OSS', { taskId, audioUrl: audioData.audio_url });
           const ossFileName = await this.ossService.downloadAndUploadToOSS(audioData.audio_url);
 
@@ -771,6 +772,8 @@ export class TaskManager {
         };
 
         if (audioData.audio_url) {
+          // 下载音频文件并上传到 OSS
+          logger.info('开始上传音频到 OSS', { taskId, audioUrl: audioData.audio_url });
           const ossFileName = await this.ossService.downloadAndUploadToOSS(audioData.audio_url);
 
           this.updateTask(taskId, {
@@ -944,6 +947,8 @@ export class TaskManager {
         };
 
         if (audioData.audio_url) {
+          // 下载音频文件并上传到 OSS
+          logger.info('开始上传音频到 OSS', { taskId, audioUrl: audioData.audio_url });
           const ossFileName = await this.ossService.downloadAndUploadToOSS(audioData.audio_url);
 
           this.updateTask(taskId, {
