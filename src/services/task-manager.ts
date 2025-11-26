@@ -378,9 +378,14 @@ export class TaskManager {
       // 1. 直接是数组 [...]
       // 2. {data: [...]}
       // 3. {taskId: ..., data: [...]}
+      // 4. {taskId: ..., sunoData: [...]}  ← Suno API 实际返回的格式
       if (Array.isArray(responseData)) {
         audioList = responseData;
         logger.info('音乐数据来自 responseData 数组', { taskId });
+      } else if (responseData?.sunoData && Array.isArray(responseData.sunoData)) {
+        // Suno API 返回的实际格式：{taskId, sunoData: [...]}
+        audioList = responseData.sunoData;
+        logger.info('音乐数据来自 responseData.sunoData', { taskId });
       } else if (responseData?.data && Array.isArray(responseData.data)) {
         audioList = responseData.data;
         logger.info('音乐数据来自 responseData.data', { taskId });
@@ -398,6 +403,7 @@ export class TaskManager {
           responseDataIsArray: Array.isArray(responseData),
           responseDataKeys: responseData ? Object.keys(responseData) : [],
           responseDataHasData: !!responseData?.data,
+          responseDataHasSunoData: !!responseData?.sunoData,
           resultHasData: !!result?.data
         });
       }
@@ -408,15 +414,26 @@ export class TaskManager {
         dataLength: audioList?.length,
         firstItem: audioList?.[0] ? {
           title: audioList[0].title,
-          hasAudioUrl: !!audioList[0].audio_url
+          hasAudioUrl: !!(audioList[0].audio_url || audioList[0].audioUrl)
         } : null
       });
 
       if (audioList && Array.isArray(audioList) && audioList.length > 0) {
-        const audioData = audioList[0];
+        const rawAudioData = audioList[0];
+
+        // 统一字段名：Suno API 返回的是驼峰命名（audioUrl），需要转换为下划线命名（audio_url）
+        const audioData = {
+          audio_url: rawAudioData.audio_url || rawAudioData.audioUrl,
+          image_url: rawAudioData.image_url || rawAudioData.imageUrl,
+          duration: rawAudioData.duration,
+          title: rawAudioData.title,
+          id: rawAudioData.id,
+          // 保留原始数据
+          ...rawAudioData
+        };
 
         if (audioData.audio_url) {
-          logger.info('开始上传音频到 OSS', { taskId });
+          logger.info('开始上传音频到 OSS', { taskId, audioUrl: audioData.audio_url });
           const ossFileName = await this.ossService.downloadAndUploadToOSS(audioData.audio_url);
 
           this.updateTask(taskId, {
@@ -721,8 +738,11 @@ export class TaskManager {
         }
       }
 
+      // 支持多种数据结构：data, sunoData 等
       if (Array.isArray(responseData)) {
         audioList = responseData;
+      } else if (responseData?.sunoData && Array.isArray(responseData.sunoData)) {
+        audioList = responseData.sunoData;
       } else if (responseData?.data && Array.isArray(responseData.data)) {
         audioList = responseData.data;
       } else if (Array.isArray(result?.data)) {
@@ -738,7 +758,17 @@ export class TaskManager {
       });
 
       if (audioList && audioList.length > 0) {
-        const audioData = audioList[0];
+        const rawAudioData = audioList[0];
+
+        // 统一字段名：驼峰命名转下划线命名
+        const audioData = {
+          audio_url: rawAudioData.audio_url || rawAudioData.audioUrl,
+          image_url: rawAudioData.image_url || rawAudioData.imageUrl,
+          duration: rawAudioData.duration,
+          title: rawAudioData.title,
+          id: rawAudioData.id,
+          ...rawAudioData
+        };
 
         if (audioData.audio_url) {
           const ossFileName = await this.ossService.downloadAndUploadToOSS(audioData.audio_url);
@@ -881,8 +911,11 @@ export class TaskManager {
         }
       }
 
+      // 支持多种数据结构：data, sunoData 等
       if (Array.isArray(responseData)) {
         audioList = responseData;
+      } else if (responseData?.sunoData && Array.isArray(responseData.sunoData)) {
+        audioList = responseData.sunoData;
       } else if (responseData?.data && Array.isArray(responseData.data)) {
         audioList = responseData.data;
       } else if (Array.isArray(result?.data)) {
@@ -898,7 +931,17 @@ export class TaskManager {
       });
 
       if (audioList && audioList.length > 0) {
-        const audioData = audioList[0];
+        const rawAudioData = audioList[0];
+
+        // 统一字段名：驼峰命名转下划线命名
+        const audioData = {
+          audio_url: rawAudioData.audio_url || rawAudioData.audioUrl,
+          image_url: rawAudioData.image_url || rawAudioData.imageUrl,
+          duration: rawAudioData.duration,
+          title: rawAudioData.title,
+          id: rawAudioData.id,
+          ...rawAudioData
+        };
 
         if (audioData.audio_url) {
           const ossFileName = await this.ossService.downloadAndUploadToOSS(audioData.audio_url);
