@@ -89,6 +89,38 @@ function startCallbackServer() {
 // 延迟函数
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// 根据任务类型和输入构建 metadata
+function buildMetadata(task) {
+  const input = task.input || {};
+
+  if (task.type === 'MUSIC_GENERATION') {
+    return {
+      type: 'music',
+      prompt: input.prompt || '',
+      model: input.model || '',
+      customMode: input.customMode ?? false,
+      instrumental: input.instrumental ?? false,
+      style: input.style || '',
+      title: input.title || ''
+    };
+  } else if (task.type === 'LYRICS_GENERATION') {
+    return {
+      type: 'lyrics',
+      prompt: input.prompt || ''
+    };
+  } else if (task.type === 'ADD_VOCALS') {
+    return {
+      type: 'vocals',
+      prompt: input.prompt || '',
+      audioUrl: input.audioUrl || '',
+      title: input.title || '',
+      style: input.style || ''
+    };
+  }
+
+  return { type: 'unknown', prompt: input.prompt || '' };
+}
+
 // 轮询等待任务完成
 async function pollTaskStatus(taskId, maxAttempts = 120, intervalMs = 3000) {
   console.log(`\n⏳ 轮询任务状态 (任务ID: ${taskId})...`);
@@ -106,7 +138,8 @@ async function pollTaskStatus(taskId, maxAttempts = 120, intervalMs = 3000) {
           taskId,
           status: 'success',
           taskType: task.type,
-          data: task.output
+          data: task.output,
+          metadata: buildMetadata(task)
         };
       } else if (task.status === 'FAILED') {
         console.log('\n❌ 任务失败:', task.error);
@@ -114,7 +147,8 @@ async function pollTaskStatus(taskId, maxAttempts = 120, intervalMs = 3000) {
           taskId,
           status: 'failed',
           taskType: task.type,
-          error: task.error
+          error: task.error,
+          metadata: buildMetadata(task)
         };
       }
     } catch (error) {
