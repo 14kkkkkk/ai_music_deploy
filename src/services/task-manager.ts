@@ -356,25 +356,50 @@ export class TaskManager {
 
       // 尝试从 response 字段获取数据
       let responseData = result?.response;
+
+      logger.info('音乐原始 response 数据', {
+        taskId,
+        responseDataType: typeof responseData,
+        responseDataPreview: typeof responseData === 'string'
+          ? responseData.substring(0, 300)
+          : JSON.stringify(responseData)?.substring(0, 300)
+      });
+
       if (typeof responseData === 'string') {
         try {
           responseData = JSON.parse(responseData);
+          logger.info('解析 response 字符串成功', { taskId });
         } catch (e) {
           logger.warn('解析 response 字符串失败', { taskId });
         }
       }
 
-      // response 可能是 {data: [...]} 或直接是数组
+      // response 可能是多种结构：
+      // 1. 直接是数组 [...]
+      // 2. {data: [...]}
+      // 3. {taskId: ..., data: [...]}
       if (Array.isArray(responseData)) {
         audioList = responseData;
+        logger.info('音乐数据来自 responseData 数组', { taskId });
       } else if (responseData?.data && Array.isArray(responseData.data)) {
         audioList = responseData.data;
+        logger.info('音乐数据来自 responseData.data', { taskId });
       } else if (Array.isArray(result?.data)) {
         // 兼容其他格式：result.data 直接是数组
         audioList = result.data;
+        logger.info('音乐数据来自 result.data', { taskId });
       } else if (result?.data?.data && Array.isArray(result.data.data)) {
         // 兼容其他格式：result.data.data 是数组
         audioList = result.data.data;
+        logger.info('音乐数据来自 result.data.data', { taskId });
+      } else {
+        logger.warn('未找到音乐数组数据', {
+          taskId,
+          responseDataIsArray: Array.isArray(responseData),
+          responseDataKeys: responseData ? Object.keys(responseData) : [],
+          responseDataHasData: !!responseData?.data,
+          resultHasData: !!result?.data
+        });
       }
 
       logger.info('解析后的音乐数据', {
