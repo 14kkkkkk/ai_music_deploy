@@ -383,13 +383,29 @@ export class TaskManager {
       // 轮询等待歌词任务完成
       const result = await this.pollLyricsTaskUntilComplete(sunoTaskId);
 
-      // 解析歌词数据 - 取第一个结果
+      logger.info('歌词轮询结果', {
+        taskId,
+        resultKeys: Object.keys(result || {}),
+        hasData: !!result?.data,
+        dataType: Array.isArray(result?.data) ? 'array' : typeof result?.data,
+        dataLength: Array.isArray(result?.data) ? result.data.length : 'N/A'
+      });
+
+      // 解析歌词数据 - result 已经是 {status: "SUCCESS", data: [...]} 格式
       let lyricsData: any[] = [];
-      if (Array.isArray(result.data)) {
+      if (Array.isArray(result?.data)) {
+        // result.data 直接是歌词数组
         lyricsData = result.data;
-      } else if (result.data?.data && Array.isArray(result.data.data)) {
-        lyricsData = result.data.data;
+      } else if (Array.isArray(result)) {
+        // result 直接是歌词数组
+        lyricsData = result;
       }
+
+      logger.info('解析后的歌词数据', {
+        taskId,
+        lyricsCount: lyricsData.length,
+        firstItem: lyricsData[0] ? { text: lyricsData[0].text?.substring(0, 50), title: lyricsData[0].title } : null
+      });
 
       const firstLyrics = lyricsData[0] || {};
       const lyricsText = firstLyrics.text || '';
