@@ -515,7 +515,9 @@ GET /api/music/stats
   "metadata": {
     "type": "vocals",
     "prompt": "温柔的女声演唱",
-    "audioUrl": "https://example.com/original.mp3"
+    "audioUrl": "https://example.com/original.mp3",
+    "title": "夏日海边",
+    "style": "Pop, Soft"
   }
 }
 ```

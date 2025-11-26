@@ -657,7 +657,9 @@ export class TaskManager {
           metadata: {
             type: 'vocals',
             prompt: task.input.prompt || '',
-            audioUrl: task.input.audioUrl || ''
+            audioUrl: task.input.audioUrl || '',
+            title: task.input.title || '',
+            style: task.input.style || ''
           }
         });
       }
