@@ -409,17 +409,19 @@ export class TaskManager {
 
           // 5. 回调通知后端
           if (task.callbackUrl) {
+            const musicResult = {
+              audio_url: audioData.audio_url,
+              ossFileName,
+              duration: audioData.duration,
+              title: audioData.title || task.input.title || '',
+              image_url: audioData.image_url
+            };
             await this.callbackService.notifyBackend(task.callbackUrl, {
               taskId: task.id,
               status: 'success',
               taskType: 'MUSIC_GENERATION',
-              result: {
-                audio_url: audioData.audio_url,
-                ossFileName,
-                duration: audioData.duration,
-                title: audioData.title || task.input.title || '',
-                image_url: audioData.image_url
-              },
+              result: musicResult,
+              data: musicResult,  // 兼容中台期望的 data 字段
               metadata: {
                 type: 'music',
                 prompt: task.input.prompt || '',
@@ -581,14 +583,16 @@ export class TaskManager {
 
       // 回调通知后端
       if (task.callbackUrl) {
+        const lyricsResult = {
+          lyrics: lyricsText,
+          title: lyricsTitle
+        };
         await this.callbackService.notifyBackend(task.callbackUrl, {
           taskId: task.id,
           status: 'success',
           taskType: 'LYRICS_GENERATION',
-          result: {
-            lyrics: lyricsText,
-            title: lyricsTitle
-          },
+          result: lyricsResult,
+          data: lyricsResult,  // 兼容中台期望的 data 字段
           metadata: {
             type: 'lyrics',
             prompt: task.input.prompt || ''
@@ -728,17 +732,19 @@ export class TaskManager {
           logger.info('添加人声任务完成', { taskId, ossFileName });
 
           if (task.callbackUrl) {
+            const vocalsResult = {
+              audio_url: audioData.audio_url,
+              ossFileName,
+              duration: audioData.duration,
+              title: audioData.title || task.input.title || '',
+              image_url: audioData.image_url
+            };
             await this.callbackService.notifyBackend(task.callbackUrl, {
               taskId: task.id,
               status: 'success',
               taskType: 'ADD_VOCALS',
-              result: {
-                audio_url: audioData.audio_url,
-                ossFileName,
-                duration: audioData.duration,
-                title: audioData.title || task.input.title || '',
-                image_url: audioData.image_url
-              },
+              result: vocalsResult,
+              data: vocalsResult,  // 兼容中台期望的 data 字段
               metadata: {
                 type: 'vocals',
                 prompt: task.input.prompt || '',
@@ -887,17 +893,19 @@ export class TaskManager {
 
           // 回调通知后端
           if (task.callbackUrl) {
+            const instrumentalResult = {
+              audio_url: audioData.audio_url,
+              ossFileName,
+              duration: audioData.duration,
+              title: audioData.title || task.input.title || '',
+              image_url: audioData.image_url
+            };
             await this.callbackService.notifyBackend(task.callbackUrl, {
               taskId: task.id,
               status: 'success',
               taskType: 'ADD_INSTRUMENTAL',
-              result: {
-                audio_url: audioData.audio_url,
-                ossFileName,
-                duration: audioData.duration,
-                title: audioData.title || task.input.title || '',
-                image_url: audioData.image_url
-              },
+              result: instrumentalResult,
+              data: instrumentalResult,  // 兼容中台期望的 data 字段
               metadata: {
                 type: 'instrumental',
                 prompt: task.input.prompt || '',
