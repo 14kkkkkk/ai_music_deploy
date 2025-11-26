@@ -81,6 +81,22 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
             error: '自定义模式下非纯音乐时 prompt 参数必填（作为歌词使用）'
           });
         }
+        // 如果有上传音乐参考，验证 referenceType 和 audioUrl
+        if (request.referenceType) {
+          const validReferenceTypes = ['extend', 'add-vocals', 'add-instrumental'];
+          if (!validReferenceTypes.includes(request.referenceType)) {
+            return res.status(400).json({
+              success: false,
+              error: `referenceType 参数无效，可选值: ${validReferenceTypes.join(', ')}`
+            });
+          }
+          if (!request.audioUrl) {
+            return res.status(400).json({
+              success: false,
+              error: '使用上传音乐参考时 audioUrl 参数必填'
+            });
+          }
+        }
       } else {
         // 非自定义模式：prompt 必填
         if (!request.prompt) {
@@ -217,6 +233,72 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
 
     } catch (error: any) {
       logger.error('创建添加人声任务失败', { error: error.message });
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  /**
+   * POST /api/music/add-instrumental
+   * 添加伴奏
+   */
+  router.post('/add-instrumental', async (req: Request, res: Response) => {
+    try {
+      const request: AddInstrumentalRequest = req.body;
+
+      // 必填参数验证
+      if (!request.audioUrl) {
+        return res.status(400).json({
+          success: false,
+          error: 'audioUrl 参数必填'
+        });
+      }
+
+      if (!request.prompt) {
+        return res.status(400).json({
+          success: false,
+          error: 'prompt 参数必填'
+        });
+      }
+
+      if (!request.title) {
+        return res.status(400).json({
+          success: false,
+          error: 'title 参数必填（歌曲标题，最多80字符）'
+        });
+      }
+
+      if (!request.style) {
+        return res.status(400).json({
+          success: false,
+          error: 'style 参数必填（音乐风格，如: Jazz, Pop, Classical）'
+        });
+      }
+
+      if (!request.callbackUrl) {
+        return res.status(400).json({
+          success: false,
+          error: 'callbackUrl 参数必填'
+        });
+      }
+
+      const task = await taskManager.createAddInstrumentalTask(request);
+
+      logger.info('添加伴奏任务已创建', { taskId: task.id });
+
+      return res.json({
+        success: true,
+        data: {
+          taskId: task.id,
+          status: task.status,
+          message: '任务已创建，正在处理中'
+        }
+      });
+
+    } catch (error: any) {
+      logger.error('创建添加伴奏任务失败', { error: error.message });
       return res.status(500).json({
         success: false,
         error: error.message

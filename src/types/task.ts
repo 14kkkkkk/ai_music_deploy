@@ -44,6 +44,7 @@ export interface Task {
  *   - 必须提供 style 和 title
  *   - 如果 instrumental=false，prompt 必填（将作为精确歌词使用）
  *   - 如果 instrumental=true，只需 style 和 title
+ *   - 可选上传音乐参考：referenceType + audioUrl
  */
 export interface GenerateMusicRequest {
   prompt: string;                // 音乐描述/歌词（非自定义模式必填，自定义模式下 instrumental=false 时必填）
@@ -55,10 +56,13 @@ export interface GenerateMusicRequest {
   title?: string;                // 歌曲标题（自定义模式必填）
   negativeTags?: string;         // 排除的风格标签
   personaId?: string;            // 人格ID（仅自定义模式可用）
-  vocalGender?: 'm' | 'f';       // 人声性别 m=男, f=女
+  vocalGender?: 'm' | 'f';       // 人声性别 m=男, f=女（随机不传）
   styleWeight?: number;          // 风格权重 0.00-1.00
   weirdnessConstraint?: number;  // 创意发散度 0.00-1.00
   audioWeight?: number;          // 音频影响力权重 0.00-1.00
+  // 上传音乐参考（自定义模式可选）
+  referenceType?: 'extend' | 'add-vocals' | 'add-instrumental';  // 参考类型：延长音乐、添加人声、添加伴奏
+  audioUrl?: string;             // 参考音频URL（当有 referenceType 时必填）
 }
 
 /**
@@ -90,23 +94,31 @@ export interface AddVocalsRequest {
  * 添加伴奏请求
  */
 export interface AddInstrumentalRequest {
-  audioUrl: string;              // 人声音频URL
-  prompt: string;                // 伴奏描述
+  audioUrl: string;              // 人声音频URL（对应 Suno API 的 uploadUrl）
+  prompt: string;                // 伴奏描述/风格提示
+  title: string;                 // 歌曲标题（必填，最多80字符）
+  style: string;                 // 音乐风格（必填）
   callbackUrl: string;           // 回调URL（必填）
+  negativeTags?: string;         // 排除的风格标签
+  styleWeight?: number;          // 风格权重 0.00-1.00
+  weirdnessConstraint?: number;  // 创意发散度 0.00-1.00
+  audioWeight?: number;          // 音频影响力权重 0.00-1.00
+  model?: string;                // 模型版本: V4_5PLUS, V5
 }
 
 /**
  * 回调元数据
  */
 export interface CallbackMetadata {
-  type: string;                  // 任务类型: 'music' | 'lyrics' | 'vocals'
+  type: string;                  // 任务类型: 'music' | 'lyrics' | 'vocals' | 'instrumental'
   prompt: string;                // 原始提示词
   model?: string;                // 模型版本（音乐生成）
   customMode?: boolean;          // 自定义模式（音乐生成）
   instrumental?: boolean;        // 纯音乐（音乐生成）
   style?: string;                // 音乐风格（音乐生成）
   title?: string;                // 歌曲标题（音乐生成）
-  audioUrl?: string;             // 原始音频URL（添加人声）
+  audioUrl?: string;             // 原始音频URL（上传音乐参考时使用）
+  referenceType?: string;        // 参考类型: 'extend' | 'add-vocals' | 'add-instrumental'
 }
 
 /**

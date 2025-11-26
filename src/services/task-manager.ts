@@ -65,6 +65,9 @@ export class TaskManager {
         ...(typeof request.styleWeight === 'number' && { styleWeight: request.styleWeight }),
         ...(typeof request.weirdnessConstraint === 'number' && { weirdnessConstraint: request.weirdnessConstraint }),
         ...(typeof request.audioWeight === 'number' && { audioWeight: request.audioWeight }),
+        // 上传音乐参考（自定义模式可选）
+        ...(request.referenceType && { referenceType: request.referenceType }),
+        ...(request.audioUrl && { audioUrl: request.audioUrl }),
       },
       callbackUrl: request.callbackUrl,
       progress: 0,
@@ -170,6 +173,51 @@ export class TaskManager {
   }
 
   /**
+   * 创建添加伴奏任务
+   */
+  async createAddInstrumentalTask(request: AddInstrumentalRequest): Promise<Task> {
+    const maxQueueSize = parseInt(process.env.MAX_QUEUE_SIZE || '2500');
+    if (this.queue.size + this.queue.pending >= maxQueueSize) {
+      throw new Error(`队列已满，当前任务数: ${this.queue.size + this.queue.pending}`);
+    }
+
+    const task: Task = {
+      id: uuidv4(),
+      status: TaskStatus.PENDING,
+      type: TaskType.ADD_INSTRUMENTAL,
+      input: {
+        audioUrl: request.audioUrl,
+        prompt: request.prompt,
+        title: request.title,
+        style: request.style,
+        negativeTags: request.negativeTags || '',
+        model: request.model || 'V4_5PLUS',
+        // 可选高级参数
+        ...(typeof request.styleWeight === 'number' && { styleWeight: request.styleWeight }),
+        ...(typeof request.weirdnessConstraint === 'number' && { weirdnessConstraint: request.weirdnessConstraint }),
+        ...(typeof request.audioWeight === 'number' && { audioWeight: request.audioWeight }),
+      },
+      callbackUrl: request.callbackUrl,
+      progress: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    this.tasks.set(task.id, task);
+    this.queue.add(() => this.processAddInstrumentalTask(task.id)).catch((error: any) => {
+      logger.error('添加伴奏任务队列异常', { taskId: task.id, error: error.message });
+      this.handleTaskError(task.id, error, 'ADD_INSTRUMENTAL');
+    });
+
+    logger.info('添加伴奏任务已创建', {
+      taskId: task.id,
+      queueSize: this.queue.size
+    });
+
+    return task;
+  }
+
+  /**
    * 获取任务信息
    */
   getTask(taskId: string): Task | undefined {
@@ -222,16 +270,63 @@ export class TaskManager {
         progress: 10
       });
 
-      logger.info('开始处理音乐生成任务', { taskId });
+      logger.info('开始处理音乐生成任务', {
+        taskId,
+        referenceType: task.input.referenceType || 'none'
+      });
 
-      // 2. 调用 Suno API 生成音乐
+      // 2. 调用 Suno API 生成音乐（根据 referenceType 选择不同接口）
       this.updateTask(taskId, { progress: 20 });
-      const params = {
-        ...task.input,
-        callBackUrl: `${process.env.CALLBACK_BASE_URL}/api/music/callback/music-internal/${taskId}`
-      };
 
-      const response = await this.sunoApi.generateMusic(params);
+      let response: any;
+      const referenceType = task.input.referenceType;
+
+      if (referenceType === 'add-vocals') {
+        // 添加人声
+        const params = {
+          audioUrl: task.input.audioUrl,
+          prompt: task.input.prompt,
+          title: task.input.title,
+          style: task.input.style,
+          negativeTags: task.input.negativeTags || '',
+          model: task.input.model || 'V4_5PLUS',
+          callBackUrl: `${process.env.CALLBACK_BASE_URL}/api/music/callback/music-internal/${taskId}`,
+          ...(task.input.vocalGender && { vocalGender: task.input.vocalGender }),
+          ...(typeof task.input.styleWeight === 'number' && { styleWeight: task.input.styleWeight }),
+          ...(typeof task.input.weirdnessConstraint === 'number' && { weirdnessConstraint: task.input.weirdnessConstraint }),
+          ...(typeof task.input.audioWeight === 'number' && { audioWeight: task.input.audioWeight }),
+        };
+        response = await this.sunoApi.addVocals(params);
+      } else if (referenceType === 'add-instrumental') {
+        // 添加伴奏
+        const params = {
+          audioUrl: task.input.audioUrl,
+          prompt: task.input.prompt,
+          title: task.input.title,
+          style: task.input.style,
+          negativeTags: task.input.negativeTags || '',
+          model: task.input.model || 'V4_5PLUS',
+          callBackUrl: `${process.env.CALLBACK_BASE_URL}/api/music/callback/music-internal/${taskId}`,
+          ...(typeof task.input.styleWeight === 'number' && { styleWeight: task.input.styleWeight }),
+          ...(typeof task.input.weirdnessConstraint === 'number' && { weirdnessConstraint: task.input.weirdnessConstraint }),
+          ...(typeof task.input.audioWeight === 'number' && { audioWeight: task.input.audioWeight }),
+        };
+        response = await this.sunoApi.addInstrumental(params);
+      } else if (referenceType === 'extend') {
+        // 延长音乐 - TODO: 需要确认 Suno API 的延长接口
+        const params = {
+          ...task.input,
+          callBackUrl: `${process.env.CALLBACK_BASE_URL}/api/music/callback/music-internal/${taskId}`
+        };
+        response = await this.sunoApi.generateMusic(params);
+      } else {
+        // 普通音乐生成
+        const params = {
+          ...task.input,
+          callBackUrl: `${process.env.CALLBACK_BASE_URL}/api/music/callback/music-internal/${taskId}`
+        };
+        response = await this.sunoApi.generateMusic(params);
+      }
 
       if (response.code !== 200 || !response.data?.taskId) {
         throw new Error(response.msg || '调用Suno API失败');
@@ -332,7 +427,9 @@ export class TaskManager {
                 customMode: task.input.customMode ?? false,
                 instrumental: task.input.instrumental ?? false,
                 style: task.input.style || '',
-                title: task.input.title || ''
+                title: task.input.title || '',
+                referenceType: task.input.referenceType || '',
+                audioUrl: task.input.audioUrl || ''
               }
             });
           }
@@ -369,7 +466,9 @@ export class TaskManager {
             customMode: task.input.customMode ?? false,
             instrumental: task.input.instrumental ?? false,
             style: task.input.style || '',
-            title: task.input.title || ''
+            title: task.input.title || '',
+            referenceType: task.input.referenceType || '',
+            audioUrl: task.input.audioUrl || ''
           }
         });
       }
@@ -656,6 +755,165 @@ export class TaskManager {
           error: error.message,
           metadata: {
             type: 'vocals',
+            prompt: task.input.prompt || '',
+            audioUrl: task.input.audioUrl || '',
+            title: task.input.title || '',
+            style: task.input.style || ''
+          }
+        });
+      }
+    }
+  }
+
+  /**
+   * 处理添加伴奏任务
+   */
+  private async processAddInstrumentalTask(taskId: string): Promise<void> {
+    const task = this.tasks.get(taskId);
+    if (!task) return;
+
+    try {
+      this.updateTask(taskId, {
+        status: TaskStatus.PROCESSING,
+        progress: 20
+      });
+
+      const params: any = {
+        audioUrl: task.input.audioUrl,
+        prompt: task.input.prompt,
+        title: task.input.title,
+        style: task.input.style,
+        negativeTags: task.input.negativeTags || '',
+        model: task.input.model || 'V4_5PLUS',
+        callBackUrl: `${process.env.CALLBACK_BASE_URL}/api/music/callback/instrumental-internal/${taskId}`
+      };
+
+      // 添加可选参数
+      if (typeof task.input.styleWeight === 'number') {
+        params.styleWeight = task.input.styleWeight;
+      }
+      if (typeof task.input.weirdnessConstraint === 'number') {
+        params.weirdnessConstraint = task.input.weirdnessConstraint;
+      }
+      if (typeof task.input.audioWeight === 'number') {
+        params.audioWeight = task.input.audioWeight;
+      }
+
+      const response = await this.sunoApi.addInstrumental(params);
+
+      if (response.code !== 200 || !response.data?.taskId) {
+        throw new Error(response.msg || '调用Suno API失败');
+      }
+
+      const sunoTaskId = response.data.taskId;
+      this.updateTask(taskId, { progress: 40 });
+
+      // 轮询等待任务完成
+      const result = await this.pollTaskUntilComplete(sunoTaskId);
+      this.updateTask(taskId, { progress: 70 });
+
+      logger.info('添加伴奏轮询结果', {
+        taskId,
+        resultKeys: Object.keys(result || {}),
+        hasResponse: !!result?.response
+      });
+
+      // 上传音频到 OSS - 解析数据结构
+      let audioList: any[] | undefined;
+
+      let responseData = result?.response;
+      if (typeof responseData === 'string') {
+        try {
+          responseData = JSON.parse(responseData);
+        } catch (e) {
+          logger.warn('解析 response 字符串失败', { taskId });
+        }
+      }
+
+      if (Array.isArray(responseData)) {
+        audioList = responseData;
+      } else if (responseData?.data && Array.isArray(responseData.data)) {
+        audioList = responseData.data;
+      } else if (Array.isArray(result?.data)) {
+        audioList = result.data;
+      } else if (result?.data?.data && Array.isArray(result.data.data)) {
+        audioList = result.data.data;
+      }
+
+      logger.info('解析后的伴奏数据', {
+        taskId,
+        hasData: !!audioList,
+        dataLength: audioList?.length
+      });
+
+      if (audioList && audioList.length > 0) {
+        const audioData = audioList[0];
+
+        if (audioData.audio_url) {
+          const ossFileName = await this.ossService.downloadAndUploadToOSS(audioData.audio_url);
+
+          this.updateTask(taskId, {
+            status: TaskStatus.COMPLETED,
+            progress: 100,
+            output: {
+              ...audioData,
+              ossFileName,
+              audio_url: audioData.audio_url
+            },
+            completedAt: new Date()
+          });
+
+          logger.info('添加伴奏任务完成', { taskId, ossFileName });
+
+          // 回调通知后端
+          if (task.callbackUrl) {
+            await this.callbackService.notifyBackend(task.callbackUrl, {
+              taskId: task.id,
+              status: 'success',
+              taskType: 'ADD_INSTRUMENTAL',
+              result: {
+                audio_url: audioData.audio_url,
+                ossFileName,
+                duration: audioData.duration,
+                title: audioData.title || task.input.title || '',
+                image_url: audioData.image_url
+              },
+              metadata: {
+                type: 'instrumental',
+                prompt: task.input.prompt || '',
+                audioUrl: task.input.audioUrl || '',
+                title: task.input.title || '',
+                style: task.input.style || ''
+              }
+            });
+          }
+        } else {
+          throw new Error('音频URL不存在');
+        }
+      } else {
+        throw new Error('未获取到音频数据');
+      }
+
+    } catch (error: any) {
+      logger.error('添加伴奏任务失败', {
+        taskId,
+        error: error.message
+      });
+
+      this.updateTask(taskId, {
+        status: TaskStatus.FAILED,
+        error: error.message,
+        completedAt: new Date()
+      });
+
+      if (task.callbackUrl) {
+        await this.callbackService.notifyBackend(task.callbackUrl, {
+          taskId: task.id,
+          status: 'failed',
+          taskType: 'ADD_INSTRUMENTAL',
+          error: error.message,
+          metadata: {
+            type: 'instrumental',
             prompt: task.input.prompt || '',
             audioUrl: task.input.audioUrl || '',
             title: task.input.title || '',

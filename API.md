@@ -46,10 +46,12 @@
 |--------|------|------|--------|
 | negativeTags | string | 排除的风格标签 | "sad, slow" |
 | personaId | string | 人格ID（仅自定义模式可用） | "persona_123" |
-| vocalGender | string | 人声性别，可选值: `m`(男), `f`(女) | "f" |
+| vocalGender | string | 人声性别，可选值: `m`(男), `f`(女)，不传则随机 | "f" |
 | styleWeight | number | 风格权重，范围 0.00-1.00 | 0.65 |
 | weirdnessConstraint | number | 创意发散度，范围 0.00-1.00 | 0.50 |
 | audioWeight | number | 音频影响力权重，范围 0.00-1.00 | 0.70 |
+| referenceType | string | 上传音乐参考类型（仅自定义模式），可选值: `extend`(延长音乐), `add-vocals`(添加人声), `add-instrumental`(添加伴奏) | "add-vocals" |
+| audioUrl | string | 参考音频URL（当有 referenceType 时必填） | "https://example.com/audio.mp3" |
 
 ### 模式说明
 
@@ -63,6 +65,10 @@
 - 如果 `instrumental: false`（有人声），必须提供 `prompt` 作为精确歌词
 - 如果 `instrumental: true`（纯音乐），不需要 `prompt`
 - 适合需要精确控制歌词和风格的场景
+- 可选上传音乐参考：通过 `referenceType` 和 `audioUrl` 参数
+  - `extend`: 延长现有音乐
+  - `add-vocals`: 为纯音乐添加人声
+  - `add-instrumental`: 为人声添加伴奏
 
 ### 请求示例
 
@@ -105,6 +111,41 @@ curl -X POST "http://47.252.36.81:3001/api/music/generate" \
     "model": "V4",
     "style": "classical, piano, peaceful",
     "title": "宁静钢琴曲",
+    "callbackUrl": "https://your-server.com/api/music/callback"
+  }'
+```
+
+#### 示例4：自定义模式 + 添加人声（上传音乐参考）
+```bash
+curl -X POST "http://47.252.36.81:3001/api/music/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customMode": true,
+    "instrumental": false,
+    "model": "V4_5PLUS",
+    "style": "pop, soft, ballad",
+    "title": "夏日回忆",
+    "prompt": "[Verse]\n阳光洒在海面上\n微风轻轻吹过脸庞",
+    "referenceType": "add-vocals",
+    "audioUrl": "https://example.com/instrumental.mp3",
+    "vocalGender": "f",
+    "callbackUrl": "https://your-server.com/api/music/callback"
+  }'
+```
+
+#### 示例5：自定义模式 + 添加伴奏（上传音乐参考）
+```bash
+curl -X POST "http://47.252.36.81:3001/api/music/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customMode": true,
+    "instrumental": false,
+    "model": "V4_5PLUS",
+    "style": "jazz, smooth, relaxing",
+    "title": "爵士夜曲",
+    "prompt": "轻柔的爵士钢琴伴奏",
+    "referenceType": "add-instrumental",
+    "audioUrl": "https://example.com/vocals.mp3",
     "callbackUrl": "https://your-server.com/api/music/callback"
   }'
 ```
@@ -526,14 +567,15 @@ GET /api/music/stats
 
 | 字段 | 类型 | 说明 | 适用于 |
 |------|------|------|--------|
-| type | string | 任务类型: `music`、`lyrics`、`vocals` | 所有 |
+| type | string | 任务类型: `music`、`lyrics`、`vocals`、`instrumental` | 所有 |
 | prompt | string | 原始提示词 | 所有 |
 | model | string | 模型版本 | 音乐生成 |
 | customMode | boolean | 是否自定义模式 | 音乐生成 |
 | instrumental | boolean | 是否纯音乐 | 音乐生成 |
 | style | string | 音乐风格 | 音乐生成 |
 | title | string | 歌曲标题 | 音乐生成 |
-| audioUrl | string | 原始音频URL | 添加人声 |
+| referenceType | string | 参考类型: `extend`、`add-vocals`、`add-instrumental` | 音乐生成（使用上传音乐参考时） |
+| audioUrl | string | 原始音频URL | 音乐生成（使用上传音乐参考时）/ 独立接口 |
 
 ### 回调说明
 - 调用一次，不重试
