@@ -232,8 +232,12 @@ export class TaskManager {
       this.updateTask(taskId, { progress: 70 });
 
       // 4. 上传音频到 OSS
-      if (result.data && result.data.length > 0) {
-        const audioData = result.data[0];
+      // Suno API 返回格式: { data: [...音频数据...], task_id: "xxx" }
+      const audioList = result.data?.data || result.data;
+      logger.info('音乐生成结果', { taskId, hasData: !!audioList, dataLength: audioList?.length });
+
+      if (audioList && Array.isArray(audioList) && audioList.length > 0) {
+        const audioData = audioList[0];
 
         if (audioData.audio_url) {
           logger.info('开始上传音频到 OSS', { taskId });

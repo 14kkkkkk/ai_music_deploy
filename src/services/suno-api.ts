@@ -56,19 +56,20 @@ export class SunoApiService {
 
   /**
    * 生成歌词
+   * 注意：歌词接口是 /lyrics 而不是 /generate/lyrics
    */
   async generateLyrics(params: any): Promise<any> {
     try {
-      logger.info('调用 Suno API /generate/lyrics', { 
-        prompt: params.prompt?.substring(0, 50) 
+      logger.info('调用 Suno API /lyrics', {
+        prompt: params.prompt?.substring(0, 50)
       });
-      
-      const response = await this.client.post('/generate/lyrics', params);
-      
-      logger.info('Suno API 响应成功', { 
-        taskId: response.data?.data?.taskId 
+
+      const response = await this.client.post('/lyrics', params);
+
+      logger.info('Suno API 响应成功', {
+        taskId: response.data?.data?.taskId
       });
-      
+
       return response.data;
     } catch (error: any) {
       logger.error('生成歌词失败', {
