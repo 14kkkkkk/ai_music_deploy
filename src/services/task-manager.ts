@@ -246,27 +246,50 @@ export class TaskManager {
 
       this.updateTask(taskId, { progress: 70 });
 
+      logger.info('音乐轮询结果', {
+        taskId,
+        resultKeys: Object.keys(result || {}),
+        hasResponse: !!result?.response,
+        responseType: typeof result?.response
+      });
+
       // 4. 上传音频到 OSS
       // pollTaskUntilComplete 返回 result.data，其结构为:
-      // { callbackType: "complete", data: [...音频数组...], task_id: "xxx" }
-      // 或者直接是音频数组 [...]
+      // { taskId, param, response, status, type, errorCode, errorMessage }
+      // 音频数据在 response 字段里
       let audioList: any[] | undefined;
-      if (Array.isArray(result)) {
-        // 直接是数组
-        audioList = result;
-      } else if (result?.data && Array.isArray(result.data)) {
-        // { data: [...] } 结构
+
+      // 尝试从 response 字段获取数据
+      let responseData = result?.response;
+      if (typeof responseData === 'string') {
+        try {
+          responseData = JSON.parse(responseData);
+        } catch (e) {
+          logger.warn('解析 response 字符串失败', { taskId });
+        }
+      }
+
+      // response 可能是 {data: [...]} 或直接是数组
+      if (Array.isArray(responseData)) {
+        audioList = responseData;
+      } else if (responseData?.data && Array.isArray(responseData.data)) {
+        audioList = responseData.data;
+      } else if (Array.isArray(result?.data)) {
+        // 兼容其他格式：result.data 直接是数组
         audioList = result.data;
-      } else if (Array.isArray(result?.data?.data)) {
-        // { data: { data: [...] } } 结构（备用）
+      } else if (result?.data?.data && Array.isArray(result.data.data)) {
+        // 兼容其他格式：result.data.data 是数组
         audioList = result.data.data;
       }
-      logger.info('音乐生成结果', {
+
+      logger.info('解析后的音乐数据', {
         taskId,
         hasData: !!audioList,
         dataLength: audioList?.length,
-        resultType: typeof result,
-        resultKeys: result ? Object.keys(result) : []
+        firstItem: audioList?.[0] ? {
+          title: audioList[0].title,
+          hasAudioUrl: !!audioList[0].audio_url
+        } : null
       });
 
       if (audioList && Array.isArray(audioList) && audioList.length > 0) {
@@ -531,15 +554,40 @@ export class TaskManager {
       const result = await this.pollTaskUntilComplete(sunoTaskId);
       this.updateTask(taskId, { progress: 70 });
 
+      logger.info('添加人声轮询结果', {
+        taskId,
+        resultKeys: Object.keys(result || {}),
+        hasResponse: !!result?.response
+      });
+
       // 上传音频到 OSS - 解析数据结构
+      // result 结构为 {taskId, param, response, status, ...}，数据在 response 字段
       let audioList: any[] | undefined;
-      if (Array.isArray(result)) {
-        audioList = result;
-      } else if (result?.data && Array.isArray(result.data)) {
+
+      let responseData = result?.response;
+      if (typeof responseData === 'string') {
+        try {
+          responseData = JSON.parse(responseData);
+        } catch (e) {
+          logger.warn('解析 response 字符串失败', { taskId });
+        }
+      }
+
+      if (Array.isArray(responseData)) {
+        audioList = responseData;
+      } else if (responseData?.data && Array.isArray(responseData.data)) {
+        audioList = responseData.data;
+      } else if (Array.isArray(result?.data)) {
         audioList = result.data;
-      } else if (Array.isArray(result?.data?.data)) {
+      } else if (result?.data?.data && Array.isArray(result.data.data)) {
         audioList = result.data.data;
       }
+
+      logger.info('解析后的人声数据', {
+        taskId,
+        hasData: !!audioList,
+        dataLength: audioList?.length
+      });
 
       if (audioList && audioList.length > 0) {
         const audioData = audioList[0];
