@@ -189,7 +189,7 @@ export class TaskManager {
       return;
     }
 
-    let sunoTaskId: string | null = null;
+    let sunoTaskId: string = '';
 
     try {
       // 1. 更新状态为处理中
