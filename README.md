@@ -145,8 +145,7 @@ curl http://47.252.36.81:3001/api/music/stats
 | MAX_CONCURRENCY | 最大并发数 | 10 |
 | MAX_QUEUE_SIZE | 最大队列容量 | 2500 |
 | OSS_SIGNED_URL_API | OSS 签名URL接口 | - |
-| CALLBACK_TIMEOUT | 回调超时时间(ms) | 10000 |
-| CALLBACK_MAX_RETRIES | 回调最大重试次数 | 3 |
+| CALLBACK_TIMEOUT | 回调超时时间(ms) | 60000 |
 
 ## 日志说明
 
