@@ -222,10 +222,10 @@ async function testGenerateMusicCustom(useRealCallback = false) {
   }
 }
 
-// 测试生成纯音乐 - 自定义模式
+// 测试生成纯音乐 - 非自定义模式
 async function testGenerateMusicInstrumental(useRealCallback = false) {
   console.log('\n' + '='.repeat(50));
-  console.log('🎵 测试: 生成纯音乐（自定义模式）');
+  console.log('🎵 测试: 生成纯音乐（非自定义模式）');
   console.log('='.repeat(50));
 
   const callbackUrl = useRealCallback
@@ -234,14 +234,13 @@ async function testGenerateMusicInstrumental(useRealCallback = false) {
   console.log('📞 回调地址:', callbackUrl);
 
   try {
-    // 自定义模式+纯音乐：只需要 style 和 title
+    // 非自定义模式+纯音乐：只需要 prompt
     const response = await axios.post(`${CONFIG.SERVER_URL}/api/music/generate`, {
-      customMode: true,     // 必填：自定义模式
-      instrumental: true,   // 必填：纯音乐
-      model: 'V4',          // 必填：模型版本
+      prompt: '一首轻柔的钢琴曲，适合冥想和放松',
       callbackUrl: callbackUrl,
-      style: 'classical, piano, peaceful', // 自定义模式必填
-      title: '宁静钢琴曲'                   // 自定义模式必填
+      customMode: false,    // 必填：非自定义模式
+      instrumental: true,   // 必填：纯音乐（无人声）
+      model: 'V4'           // 必填：模型版本
     });
 
     console.log('✅ 任务创建成功:', response.data);
@@ -526,9 +525,9 @@ console.log(`
   node test-with-callback.js health             # 只测试健康检查
   node test-with-callback.js stats              # 只测试统计信息
   node test-with-callback.js lyrics             # 只测试生成歌词
-  node test-with-callback.js music              # 生成音乐（非自定义模式）
+  node test-with-callback.js music              # 生成音乐（非自定义模式+人声）
   node test-with-callback.js music-custom       # 生成音乐（自定义模式+人声）
-  node test-with-callback.js music-instrumental # 生成纯音乐（自定义模式）
+  node test-with-callback.js music-instrumental # 生成纯音乐（非自定义模式）
   node test-with-callback.js vocals <音频URL>   # 添加人声（需要公网可访问的音频URL）
 
   添加 --real 参数使用真实中台回调地址:
