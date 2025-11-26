@@ -28,8 +28,14 @@ export class CallbackService {
     logger.info('开始回调后端', {
       url: callbackUrl,
       taskId: payload.taskId,
-      status: payload.status
+      status: payload.status,
+      hasResult: !!payload.result,
+      resultKeys: payload.result ? Object.keys(payload.result) : [],
+      hasMetadata: !!payload.metadata
     });
+
+    // 打印完整回调内容用于调试
+    logger.info('AI音乐算法中台处理中台的回调信息', payload);
 
     try {
       const startTime = Date.now();

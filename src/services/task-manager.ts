@@ -509,7 +509,8 @@ export class TaskManager {
         taskId,
         resultKeys: Object.keys(result || {}),
         hasResponse: !!result?.response,
-        responseType: typeof result?.response
+        responseType: typeof result?.response,
+        fullResult: JSON.stringify(result).substring(0, 500)
       });
 
       // 解析歌词数据 - result 结构是 {taskId, param, response, status, ...}
@@ -518,9 +519,18 @@ export class TaskManager {
 
       // 尝试从 response 字段获取数据
       let responseData = result?.response;
+      logger.info('歌词原始 response 数据', {
+        taskId,
+        responseDataType: typeof responseData,
+        responseDataPreview: typeof responseData === 'string'
+          ? responseData.substring(0, 200)
+          : JSON.stringify(responseData)?.substring(0, 200)
+      });
+
       if (typeof responseData === 'string') {
         try {
           responseData = JSON.parse(responseData);
+          logger.info('解析 response 字符串成功', { taskId });
         } catch (e) {
           logger.warn('解析 response 字符串失败', { taskId, response: responseData?.substring(0, 100) });
         }
@@ -529,11 +539,21 @@ export class TaskManager {
       // response 可能是 {data: [...]} 或直接是数组
       if (Array.isArray(responseData)) {
         lyricsData = responseData;
+        logger.info('歌词数据来自 responseData 数组', { taskId });
       } else if (responseData?.data && Array.isArray(responseData.data)) {
         lyricsData = responseData.data;
+        logger.info('歌词数据来自 responseData.data', { taskId });
       } else if (result?.data && Array.isArray(result.data)) {
         // 兼容其他格式
         lyricsData = result.data;
+        logger.info('歌词数据来自 result.data', { taskId });
+      } else {
+        logger.warn('未找到歌词数组数据', {
+          taskId,
+          responseDataIsArray: Array.isArray(responseData),
+          responseDataHasData: !!responseData?.data,
+          resultHasData: !!result?.data
+        });
       }
 
       logger.info('解析后的歌词数据', {
