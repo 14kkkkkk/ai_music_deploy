@@ -37,16 +37,28 @@ export interface Task {
 
 /**
  * 音乐生成请求
+ *
+ * 参数说明：
+ * - customMode=false（非自定义模式）：只需要 prompt，歌词将自动生成
+ * - customMode=true（自定义模式）：
+ *   - 必须提供 style 和 title
+ *   - 如果 instrumental=false，prompt 必填（将作为精确歌词使用）
+ *   - 如果 instrumental=true，只需 style 和 title
  */
 export interface GenerateMusicRequest {
-  prompt: string;                // 音乐描述
-  customMode?: boolean;          // 自定义模式
-  instrumental?: boolean;        // 纯音乐（无人声）
-  model?: string;                // 模型版本 (V3_5, V4, V4_5, V4_5PLUS, V5)
-  title?: string;                // 歌曲标题
-  tags?: string;                 // 音乐风格标签
-  negativeTags?: string;         // 负面标签
+  prompt: string;                // 音乐描述/歌词（非自定义模式必填，自定义模式下 instrumental=false 时必填）
+  customMode: boolean;           // 自定义模式（必填）
+  instrumental: boolean;         // 纯音乐/无歌词（必填）
+  model: string;                 // 模型版本（必填）: V3_5, V4, V4_5, V4_5PLUS, V5
   callbackUrl: string;           // 回调URL（必填）
+  style?: string;                // 音乐风格（自定义模式必填）
+  title?: string;                // 歌曲标题（自定义模式必填）
+  negativeTags?: string;         // 排除的风格标签
+  personaId?: string;            // 人格ID（仅自定义模式可用）
+  vocalGender?: 'm' | 'f';       // 人声性别 m=男, f=女
+  styleWeight?: number;          // 风格权重 0.00-1.00
+  weirdnessConstraint?: number;  // 创意发散度 0.00-1.00
+  audioWeight?: number;          // 音频影响力权重 0.00-1.00
 }
 
 /**

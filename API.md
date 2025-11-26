@@ -12,7 +12,9 @@
 ## 1. 生成音乐
 
 ### 接口说明
-创建音乐生成任务，支持自定义模式和纯音乐模式。
+创建音乐生成任务，支持两种模式：
+- **非自定义模式** (`customMode: false`)：只需提供 `prompt`，歌词将自动生成
+- **自定义模式** (`customMode: true`)：需要提供 `style` 和 `title`，可精确控制歌词
 
 ### 请求信息
 - **URL**: `/api/music/generate`
@@ -21,29 +23,90 @@
 
 ### 请求参数
 
-| 参数名 | 类型 | 必填 | 说明 | 示例值 |
+#### 必填参数
+
+| 参数名 | 类型 | 说明 | 示例值 |
+|--------|------|------|--------|
+| customMode | boolean | 是否使用自定义模式 | false |
+| instrumental | boolean | 是否生成纯音乐（无人声） | false |
+| model | string | 模型版本，可选值: `V3_5`, `V4`, `V4_5`, `V4_5PLUS`, `V5` | "V4" |
+| callbackUrl | string | 任务完成后的回调地址 | "https://your-server.com/callback" |
+
+#### 条件必填参数
+
+| 参数名 | 类型 | 条件 | 说明 | 示例值 |
 |--------|------|------|------|--------|
-| prompt | string | 是 | 音乐描述或歌词内容 | "一首轻快的流行歌曲" |
-| callbackUrl | string | 是 | 任务完成后的回调地址 | "http://your-server.com/callback" |
-| customMode | boolean | 否 | 是否使用自定义模式（默认 false） | true |
-| instrumental | boolean | 否 | 是否生成纯音乐（默认 false） | false |
-| model | string | 否 | 使用的模型版本（默认 "V4"） | "V4" |
-| title | string | 否 | 音乐标题 | "夏日回忆" |
-| tags | string | 否 | 音乐风格标签 | "pop, upbeat, summer" |
-| negativeTags | string | 否 | 排除的风格标签 | "sad, slow" |
+| prompt | string | 非自定义模式必填；自定义模式下 instrumental=false 时必填 | 音乐描述或精确歌词 | "一首轻快的流行歌曲" |
+| style | string | 自定义模式必填 | 音乐风格标签 | "pop, upbeat, summer" |
+| title | string | 自定义模式必填 | 歌曲标题 | "夏日海滩" |
+
+#### 可选参数
+
+| 参数名 | 类型 | 说明 | 示例值 |
+|--------|------|------|--------|
+| negativeTags | string | 排除的风格标签 | "sad, slow" |
+| personaId | string | 人格ID（仅自定义模式可用） | "persona_123" |
+| vocalGender | string | 人声性别，可选值: `m`(男), `f`(女) | "f" |
+| styleWeight | number | 风格权重，范围 0.00-1.00 | 0.65 |
+| weirdnessConstraint | number | 创意发散度，范围 0.00-1.00 | 0.50 |
+| audioWeight | number | 音频影响力权重，范围 0.00-1.00 | 0.70 |
+
+### 模式说明
+
+#### 非自定义模式 (customMode: false)
+- 只需要提供 `prompt` 参数
+- 系统会根据 prompt 自动生成歌词和音乐
+- 适合快速生成，不需要精确控制歌词内容
+
+#### 自定义模式 (customMode: true)
+- 必须提供 `style` 和 `title` 参数
+- 如果 `instrumental: false`（有人声），必须提供 `prompt` 作为精确歌词
+- 如果 `instrumental: true`（纯音乐），不需要 `prompt`
+- 适合需要精确控制歌词和风格的场景
 
 ### 请求示例
 
-```json
-{
-  "prompt": "一首关于夏天海边的轻快流行歌曲",
-  "callbackUrl": "http://your-server.com/api/music/callback",
-  "customMode": false,
-  "instrumental": false,
-  "model": "V4",
-  "title": "夏日海滩",
-  "tags": "pop, upbeat, summer, beach"
-}
+#### 示例1：非自定义模式（自动生成歌词）
+```bash
+curl -X POST "http://47.252.36.81:3001/api/music/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customMode": false,
+    "instrumental": false,
+    "model": "V4",
+    "prompt": "一首关于夏天海边的轻快流行歌曲",
+    "callbackUrl": "https://your-server.com/api/music/callback"
+  }'
+```
+
+#### 示例2：自定义模式 + 有人声（精确歌词）
+```bash
+curl -X POST "http://47.252.36.81:3001/api/music/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customMode": true,
+    "instrumental": false,
+    "model": "V4",
+    "style": "pop, upbeat, summer",
+    "title": "夏日海滩",
+    "prompt": "[Verse]\n阳光照耀在沙滩上\n海浪轻轻拍打着岸边\n\n[Chorus]\n这是最美的夏天\n和你一起在海边",
+    "negativeTags": "悲伤, 慢节奏",
+    "callbackUrl": "https://your-server.com/api/music/callback"
+  }'
+```
+
+#### 示例3：自定义模式 + 纯音乐
+```bash
+curl -X POST "http://47.252.36.81:3001/api/music/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customMode": true,
+    "instrumental": true,
+    "model": "V4",
+    "style": "classical, piano, peaceful",
+    "title": "宁静钢琴曲",
+    "callbackUrl": "https://your-server.com/api/music/callback"
+  }'
 ```
 
 ### 响应示例
@@ -60,11 +123,11 @@
 }
 ```
 
-**失败响应 (400/500)**:
+**失败响应 (400)**:
 ```json
 {
   "success": false,
-  "error": "prompt 参数必填"
+  "error": "自定义模式下 style 参数必填"
 }
 ```
 
