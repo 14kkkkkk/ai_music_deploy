@@ -67,7 +67,10 @@ export class TaskManager {
     };
 
     this.tasks.set(task.id, task);
-    this.queue.add(() => this.processMusicGenerationTask(task.id));
+    this.queue.add(() => this.processMusicGenerationTask(task.id)).catch((error: any) => {
+      logger.error('音乐生成任务队列异常', { taskId: task.id, error: error.message });
+      this.handleTaskError(task.id, error, 'MUSIC_GENERATION');
+    });
 
     logger.info('音乐生成任务已创建', {
       taskId: task.id,
@@ -101,7 +104,10 @@ export class TaskManager {
     };
 
     this.tasks.set(task.id, task);
-    this.queue.add(() => this.processLyricsGenerationTask(task.id));
+    this.queue.add(() => this.processLyricsGenerationTask(task.id)).catch((error: any) => {
+      logger.error('歌词生成任务队列异常', { taskId: task.id, error: error.message });
+      this.handleTaskError(task.id, error, 'LYRICS_GENERATION');
+    });
 
     logger.info('歌词生成任务已创建', {
       taskId: task.id,
@@ -135,7 +141,10 @@ export class TaskManager {
     };
 
     this.tasks.set(task.id, task);
-    this.queue.add(() => this.processAddVocalsTask(task.id));
+    this.queue.add(() => this.processAddVocalsTask(task.id)).catch((error: any) => {
+      logger.error('添加人声任务队列异常', { taskId: task.id, error: error.message });
+      this.handleTaskError(task.id, error, 'ADD_VOCALS');
+    });
 
     logger.info('添加人声任务已创建', {
       taskId: task.id,
@@ -314,8 +323,8 @@ export class TaskManager {
       const sunoTaskId = response.data.taskId;
       this.updateTask(taskId, { progress: 40 });
 
-      // 轮询等待任务完成
-      const result = await this.pollTaskUntilComplete(sunoTaskId);
+      // 轮询等待歌词任务完成
+      const result = await this.pollLyricsTaskUntilComplete(sunoTaskId);
 
       this.updateTask(taskId, {
         status: TaskStatus.COMPLETED,
@@ -454,7 +463,7 @@ export class TaskManager {
   }
 
   /**
-   * 轮询任务直到完成
+   * 轮询音乐生成任务直到完成
    */
   private async pollTaskUntilComplete(sunoTaskId: string): Promise<any> {
     const maxAttempts = 120; // 最多轮询 120 次（10分钟）
@@ -468,14 +477,14 @@ export class TaskManager {
           const status = result.data.status;
 
           if (status === 'SUCCESS') {
-            logger.info('Suno任务完成', { sunoTaskId });
+            logger.info('Suno音乐任务完成', { sunoTaskId });
             return result.data;
           } else if (status === 'FAILED') {
             throw new Error('Suno任务失败');
           }
 
           // 继续轮询
-          logger.info('Suno任务处理中', {
+          logger.info('Suno音乐任务处理中', {
             sunoTaskId,
             status,
             attempt: `${attempt}/${maxAttempts}`
@@ -487,11 +496,54 @@ export class TaskManager {
         if (attempt === maxAttempts) {
           throw error;
         }
+        logger.warn('查询音乐任务状态失败，重试中', { sunoTaskId, attempt, error: error.message });
         await this.sleep(pollInterval);
       }
     }
 
     throw new Error('任务超时');
+  }
+
+  /**
+   * 轮询歌词生成任务直到完成
+   */
+  private async pollLyricsTaskUntilComplete(sunoTaskId: string): Promise<any> {
+    const maxAttempts = 60; // 歌词生成较快，60次（5分钟）
+    const pollInterval = 5000; // 每 5 秒轮询一次
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const result = await this.sunoApi.getLyricsTaskDetail(sunoTaskId);
+
+        if (result.code === 200 && result.data) {
+          const status = result.data.status;
+
+          if (status === 'SUCCESS') {
+            logger.info('Suno歌词任务完成', { sunoTaskId });
+            return result.data;
+          } else if (status === 'FAILED') {
+            throw new Error('Suno歌词任务失败');
+          }
+
+          // 继续轮询
+          logger.info('Suno歌词任务处理中', {
+            sunoTaskId,
+            status,
+            attempt: `${attempt}/${maxAttempts}`
+          });
+        }
+
+        await this.sleep(pollInterval);
+      } catch (error: any) {
+        if (attempt === maxAttempts) {
+          throw error;
+        }
+        logger.warn('查询歌词任务状态失败，重试中', { sunoTaskId, attempt, error: error.message });
+        await this.sleep(pollInterval);
+      }
+    }
+
+    throw new Error('歌词任务超时');
   }
 
   /**
@@ -523,5 +575,38 @@ export class TaskManager {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * 处理任务错误（队列超时等）
+   */
+  private async handleTaskError(taskId: string, error: any, taskType: string): Promise<void> {
+    const task = this.tasks.get(taskId);
+    if (!task) return;
+
+    const errorMessage = error.message || '任务执行失败';
+
+    this.updateTask(taskId, {
+      status: TaskStatus.FAILED,
+      error: errorMessage,
+      completedAt: new Date()
+    });
+
+    // 回调通知失败
+    if (task.callbackUrl) {
+      try {
+        await this.callbackService.notifyBackend(task.callbackUrl, {
+          taskId: task.id,
+          status: 'failed',
+          taskType: taskType,
+          error: errorMessage
+        });
+      } catch (callbackError: any) {
+        logger.error('回调通知失败', {
+          taskId,
+          error: callbackError.message
+        });
+      }
+    }
   }
 }

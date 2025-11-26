@@ -127,18 +127,34 @@ export class SunoApiService {
   }
 
   /**
-   * 查询任务详情
+   * 查询音乐生成任务详情
    */
   async getTaskDetail(taskId: string): Promise<any> {
     try {
-      const response = await this.client.get(`/generate/detail?taskId=${taskId}`);
+      const response = await this.client.get(`/generate/record-info?taskId=${taskId}`);
       return response.data;
     } catch (error: any) {
-      logger.error('查询任务详情失败', {
+      logger.error('查询音乐任务详情失败', {
         taskId,
         error: error.response?.data || error.message
       });
       throw new Error(error.response?.data?.msg || 'Failed to get task detail');
+    }
+  }
+
+  /**
+   * 查询歌词生成任务详情
+   */
+  async getLyricsTaskDetail(taskId: string): Promise<any> {
+    try {
+      const response = await this.client.get(`/lyrics/record-info?taskId=${taskId}`);
+      return response.data;
+    } catch (error: any) {
+      logger.error('查询歌词任务详情失败', {
+        taskId,
+        error: error.response?.data || error.message
+      });
+      throw new Error(error.response?.data?.msg || 'Failed to get lyrics task detail');
     }
   }
 }
