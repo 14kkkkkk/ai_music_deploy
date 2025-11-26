@@ -393,7 +393,13 @@ GET /api/music/stats
 
 ### 回调请求格式
 
-所有回调都包含 `metadata` 字段，用于返回任务的原始请求信息。
+所有回调都包含以下字段：
+- `taskId`: 任务ID
+- `status`: 任务状态 (`success` 或 `failed`)
+- `taskType`: 任务类型
+- `result`: 成功时的结果数据（成功时必有）
+- `error`: 失败时的错误信息（失败时必有）
+- `metadata`: 任务的原始请求信息（必有）
 
 #### 音乐生成回调
 
@@ -403,15 +409,12 @@ GET /api/music/stats
   "taskId": "550e8400-e29b-41d4-a716-446655440000",
   "status": "success",
   "taskType": "MUSIC_GENERATION",
-  "data": {
-    "id": "suno-12345",
-    "title": "夏日海滩",
+  "result": {
     "audio_url": "https://cdn.sunoapi.org/audio/12345.mp3",
     "ossFileName": "a1b2c3d4e5f6.mp3",
-    "image_url": "https://cdn.sunoapi.org/image/12345.jpg",
-    "lyric": "歌词内容...",
-    "tags": "pop, upbeat, summer, beach",
-    "duration": 180
+    "duration": 180,
+    "title": "夏日海滩",
+    "image_url": "https://cdn.sunoapi.org/image/12345.jpg"
   },
   "metadata": {
     "type": "music",
@@ -452,8 +455,8 @@ GET /api/music/stats
   "taskId": "550e8400-e29b-41d4-a716-446655440000",
   "status": "success",
   "taskType": "LYRICS_GENERATION",
-  "data": {
-    "text": "[Verse 1]\n海风轻轻吹过...\n\n[Chorus]\n夏天的海边...",
+  "result": {
+    "lyrics": "[Verse 1]\n海风轻轻吹过...\n\n[Chorus]\n夏天的海边...",
     "title": "夏日海边"
   },
   "metadata": {
@@ -485,15 +488,19 @@ GET /api/music/stats
   "taskId": "550e8400-e29b-41d4-a716-446655440000",
   "status": "success",
   "taskType": "ADD_VOCALS",
-  "data": {
-    "id": "suno-12345",
+  "result": {
     "audio_url": "https://cdn.sunoapi.org/audio/12345.mp3",
-    "ossFileName": "a1b2c3d4e5f6.mp3"
+    "ossFileName": "a1b2c3d4e5f6.mp3",
+    "duration": 180,
+    "title": "夏日海边",
+    "image_url": "https://cdn.sunoapi.org/image/12345.jpg"
   },
   "metadata": {
     "type": "vocals",
     "prompt": "温柔的女声演唱",
-    "audioUrl": "https://example.com/original.mp3"
+    "audioUrl": "https://example.com/original.mp3",
+    "title": "夏日海边",
+    "style": "Pop, Soft"
   }
 }
 ```

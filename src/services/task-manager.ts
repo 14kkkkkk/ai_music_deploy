@@ -295,10 +295,12 @@ export class TaskManager {
               taskId: task.id,
               status: 'success',
               taskType: 'MUSIC_GENERATION',
-              data: {
-                ...audioData,
+              result: {
+                audio_url: audioData.audio_url,
                 ossFileName,
-                audio_url: audioData.audio_url
+                duration: audioData.duration,
+                title: audioData.title || task.input.title || '',
+                image_url: audioData.image_url
               },
               metadata: {
                 type: 'music',
@@ -381,10 +383,26 @@ export class TaskManager {
       // 轮询等待歌词任务完成
       const result = await this.pollLyricsTaskUntilComplete(sunoTaskId);
 
+      // 解析歌词数据 - 取第一个结果
+      let lyricsData: any[] = [];
+      if (Array.isArray(result.data)) {
+        lyricsData = result.data;
+      } else if (result.data?.data && Array.isArray(result.data.data)) {
+        lyricsData = result.data.data;
+      }
+
+      const firstLyrics = lyricsData[0] || {};
+      const lyricsText = firstLyrics.text || '';
+      const lyricsTitle = firstLyrics.title || '';
+
       this.updateTask(taskId, {
         status: TaskStatus.COMPLETED,
         progress: 100,
-        output: result.data,
+        output: {
+          lyrics: lyricsText,
+          title: lyricsTitle,
+          allResults: lyricsData  // 保留所有结果供需要时使用
+        },
         completedAt: new Date()
       });
 
@@ -396,7 +414,10 @@ export class TaskManager {
           taskId: task.id,
           status: 'success',
           taskType: 'LYRICS_GENERATION',
-          data: result.data,
+          result: {
+            lyrics: lyricsText,
+            title: lyricsTitle
+          },
           metadata: {
             type: 'lyrics',
             prompt: task.input.prompt || ''
@@ -515,10 +536,12 @@ export class TaskManager {
               taskId: task.id,
               status: 'success',
               taskType: 'ADD_VOCALS',
-              data: {
-                ...audioData,
+              result: {
+                audio_url: audioData.audio_url,
                 ossFileName,
-                audio_url: audioData.audio_url
+                duration: audioData.duration,
+                title: audioData.title || task.input.title || '',
+                image_url: audioData.image_url
               },
               metadata: {
                 type: 'vocals',

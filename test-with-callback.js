@@ -138,7 +138,7 @@ async function pollTaskStatus(taskId, maxAttempts = 120, intervalMs = 3000) {
           taskId,
           status: 'success',
           taskType: task.type,
-          data: task.output,
+          result: task.output,
           metadata: buildMetadata(task)
         };
       } else if (task.status === 'FAILED') {

@@ -116,7 +116,8 @@ export interface CallbackPayload {
   taskId: string;                // 任务ID
   status: 'success' | 'failed';  // 任务状态
   taskType: string;              // 任务类型
-  data?: any;                    // 成功时的数据
+  result?: any;                  // 成功时的结果数据
+  data?: any;                    // 成功时的数据（兼容旧格式）
   error?: string;                // 失败时的错误信息
   metadata: CallbackMetadata;    // 元数据（必填）
 }
