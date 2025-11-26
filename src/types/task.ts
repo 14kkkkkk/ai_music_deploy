@@ -88,6 +88,20 @@ export interface AddInstrumentalRequest {
 }
 
 /**
+ * 回调元数据
+ */
+export interface CallbackMetadata {
+  type: string;                  // 任务类型: 'music' | 'lyrics' | 'vocals'
+  prompt: string;                // 原始提示词
+  model?: string;                // 模型版本（音乐生成）
+  customMode?: boolean;          // 自定义模式（音乐生成）
+  instrumental?: boolean;        // 纯音乐（音乐生成）
+  style?: string;                // 音乐风格（音乐生成）
+  title?: string;                // 歌曲标题（音乐生成）
+  audioUrl?: string;             // 原始音频URL（添加人声）
+}
+
+/**
  * 回调数据格式
  */
 export interface CallbackPayload {
@@ -96,5 +110,6 @@ export interface CallbackPayload {
   taskType: string;              // 任务类型
   data?: any;                    // 成功时的数据
   error?: string;                // 失败时的错误信息
+  metadata: CallbackMetadata;    // 元数据（必填）
 }
 

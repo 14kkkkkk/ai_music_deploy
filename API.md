@@ -351,6 +351,10 @@ GET /api/music/stats
 
 ### 回调请求格式
 
+所有回调都包含 `metadata` 字段，用于返回任务的原始请求信息。
+
+#### 音乐生成回调
+
 **成功回调**:
 ```json
 {
@@ -366,6 +370,15 @@ GET /api/music/stats
     "lyric": "歌词内容...",
     "tags": "pop, upbeat, summer, beach",
     "duration": 180
+  },
+  "metadata": {
+    "type": "music",
+    "prompt": "一首关于夏天海边的歌",
+    "model": "V4",
+    "customMode": false,
+    "instrumental": false,
+    "style": "",
+    "title": ""
   }
 }
 ```
@@ -376,13 +389,105 @@ GET /api/music/stats
   "taskId": "550e8400-e29b-41d4-a716-446655440000",
   "status": "failed",
   "taskType": "MUSIC_GENERATION",
-  "error": "Suno任务失败"
+  "error": "Suno任务失败",
+  "metadata": {
+    "type": "music",
+    "prompt": "一首关于夏天海边的歌",
+    "model": "V4",
+    "customMode": false,
+    "instrumental": false,
+    "style": "",
+    "title": ""
+  }
 }
 ```
+
+#### 歌词生成回调
+
+**成功回调**:
+```json
+{
+  "taskId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "success",
+  "taskType": "LYRICS_GENERATION",
+  "data": {
+    "text": "[Verse 1]\n海风轻轻吹过...\n\n[Chorus]\n夏天的海边...",
+    "title": "夏日海边"
+  },
+  "metadata": {
+    "type": "lyrics",
+    "prompt": "一首关于夏天海边的歌"
+  }
+}
+```
+
+**失败回调**:
+```json
+{
+  "taskId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "failed",
+  "taskType": "LYRICS_GENERATION",
+  "error": "Suno歌词任务失败",
+  "metadata": {
+    "type": "lyrics",
+    "prompt": "一首关于夏天海边的歌"
+  }
+}
+```
+
+#### 添加人声回调
+
+**成功回调**:
+```json
+{
+  "taskId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "success",
+  "taskType": "ADD_VOCALS",
+  "data": {
+    "id": "suno-12345",
+    "audio_url": "https://cdn.sunoapi.org/audio/12345.mp3",
+    "ossFileName": "a1b2c3d4e5f6.mp3"
+  },
+  "metadata": {
+    "type": "vocals",
+    "prompt": "温柔的女声演唱",
+    "audioUrl": "https://example.com/original.mp3"
+  }
+}
+```
+
+**失败回调**:
+```json
+{
+  "taskId": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "failed",
+  "taskType": "ADD_VOCALS",
+  "error": "添加人声失败",
+  "metadata": {
+    "type": "vocals",
+    "prompt": "温柔的女声演唱",
+    "audioUrl": "https://example.com/original.mp3"
+  }
+}
+```
+
+### metadata 字段说明
+
+| 字段 | 类型 | 说明 | 适用于 |
+|------|------|------|--------|
+| type | string | 任务类型: `music`、`lyrics`、`vocals` | 所有 |
+| prompt | string | 原始提示词 | 所有 |
+| model | string | 模型版本 | 音乐生成 |
+| customMode | boolean | 是否自定义模式 | 音乐生成 |
+| instrumental | boolean | 是否纯音乐 | 音乐生成 |
+| style | string | 音乐风格 | 音乐生成 |
+| title | string | 歌曲标题 | 音乐生成 |
+| audioUrl | string | 原始音频URL | 添加人声 |
 
 ### 回调说明
 - 调用一次，不重试
 - 超时时间：60秒
+- `metadata` 字段始终存在，不会为 `undefined`
 
 ---
 

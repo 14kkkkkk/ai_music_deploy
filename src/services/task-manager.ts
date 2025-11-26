@@ -238,9 +238,27 @@ export class TaskManager {
       this.updateTask(taskId, { progress: 70 });
 
       // 4. 上传音频到 OSS
-      // Suno API 返回格式: { data: [...音频数据...], task_id: "xxx" }
-      const audioList = result.data?.data || result.data;
-      logger.info('音乐生成结果', { taskId, hasData: !!audioList, dataLength: audioList?.length });
+      // pollTaskUntilComplete 返回 result.data，其结构为:
+      // { callbackType: "complete", data: [...音频数组...], task_id: "xxx" }
+      // 或者直接是音频数组 [...]
+      let audioList: any[] | undefined;
+      if (Array.isArray(result)) {
+        // 直接是数组
+        audioList = result;
+      } else if (result?.data && Array.isArray(result.data)) {
+        // { data: [...] } 结构
+        audioList = result.data;
+      } else if (Array.isArray(result?.data?.data)) {
+        // { data: { data: [...] } } 结构（备用）
+        audioList = result.data.data;
+      }
+      logger.info('音乐生成结果', {
+        taskId,
+        hasData: !!audioList,
+        dataLength: audioList?.length,
+        resultType: typeof result,
+        resultKeys: result ? Object.keys(result) : []
+      });
 
       if (audioList && Array.isArray(audioList) && audioList.length > 0) {
         const audioData = audioList[0];
@@ -272,6 +290,15 @@ export class TaskManager {
                 ...audioData,
                 ossFileName,
                 audio_url: audioData.audio_url
+              },
+              metadata: {
+                type: 'music',
+                prompt: task.input.prompt || '',
+                model: task.input.model || '',
+                customMode: task.input.customMode ?? false,
+                instrumental: task.input.instrumental ?? false,
+                style: task.input.style || '',
+                title: task.input.title || ''
               }
             });
           }
@@ -300,7 +327,16 @@ export class TaskManager {
           taskId: task.id,
           status: 'failed',
           taskType: 'MUSIC_GENERATION',
-          error: error.message
+          error: error.message,
+          metadata: {
+            type: 'music',
+            prompt: task.input.prompt || '',
+            model: task.input.model || '',
+            customMode: task.input.customMode ?? false,
+            instrumental: task.input.instrumental ?? false,
+            style: task.input.style || '',
+            title: task.input.title || ''
+          }
         });
       }
     }
@@ -351,7 +387,11 @@ export class TaskManager {
           taskId: task.id,
           status: 'success',
           taskType: 'LYRICS_GENERATION',
-          data: result.data
+          data: result.data,
+          metadata: {
+            type: 'lyrics',
+            prompt: task.input.prompt || ''
+          }
         });
       }
 
@@ -372,7 +412,11 @@ export class TaskManager {
           taskId: task.id,
           status: 'failed',
           taskType: 'LYRICS_GENERATION',
-          error: error.message
+          error: error.message,
+          metadata: {
+            type: 'lyrics',
+            prompt: task.input.prompt || ''
+          }
         });
       }
     }
@@ -410,9 +454,18 @@ export class TaskManager {
       const result = await this.pollTaskUntilComplete(sunoTaskId);
       this.updateTask(taskId, { progress: 70 });
 
-      // 上传音频到 OSS
-      if (result.data && result.data.length > 0) {
-        const audioData = result.data[0];
+      // 上传音频到 OSS - 解析数据结构
+      let audioList: any[] | undefined;
+      if (Array.isArray(result)) {
+        audioList = result;
+      } else if (result?.data && Array.isArray(result.data)) {
+        audioList = result.data;
+      } else if (Array.isArray(result?.data?.data)) {
+        audioList = result.data.data;
+      }
+
+      if (audioList && audioList.length > 0) {
+        const audioData = audioList[0];
 
         if (audioData.audio_url) {
           const ossFileName = await this.ossService.downloadAndUploadToOSS(audioData.audio_url);
@@ -439,6 +492,11 @@ export class TaskManager {
                 ...audioData,
                 ossFileName,
                 audio_url: audioData.audio_url
+              },
+              metadata: {
+                type: 'vocals',
+                prompt: task.input.prompt || '',
+                audioUrl: task.input.audioUrl || ''
               }
             });
           }
@@ -466,7 +524,12 @@ export class TaskManager {
           taskId: task.id,
           status: 'failed',
           taskType: 'ADD_VOCALS',
-          error: error.message
+          error: error.message,
+          metadata: {
+            type: 'vocals',
+            prompt: task.input.prompt || '',
+            audioUrl: task.input.audioUrl || ''
+          }
         });
       }
     }
@@ -602,6 +665,31 @@ export class TaskManager {
       completedAt: new Date()
     });
 
+    // 根据任务类型构建 metadata
+    let metadata: any = { type: 'unknown', prompt: '' };
+    if (taskType === 'MUSIC_GENERATION') {
+      metadata = {
+        type: 'music',
+        prompt: task.input.prompt || '',
+        model: task.input.model || '',
+        customMode: task.input.customMode ?? false,
+        instrumental: task.input.instrumental ?? false,
+        style: task.input.style || '',
+        title: task.input.title || ''
+      };
+    } else if (taskType === 'LYRICS_GENERATION') {
+      metadata = {
+        type: 'lyrics',
+        prompt: task.input.prompt || ''
+      };
+    } else if (taskType === 'ADD_VOCALS') {
+      metadata = {
+        type: 'vocals',
+        prompt: task.input.prompt || '',
+        audioUrl: task.input.audioUrl || ''
+      };
+    }
+
     // 回调通知失败
     if (task.callbackUrl) {
       try {
@@ -609,7 +697,8 @@ export class TaskManager {
           taskId: task.id,
           status: 'failed',
           taskType: taskType,
-          error: errorMessage
+          error: errorMessage,
+          metadata
         });
       } catch (callbackError: any) {
         logger.error('回调通知失败', {
