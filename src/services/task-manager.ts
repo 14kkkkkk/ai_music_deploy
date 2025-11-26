@@ -138,7 +138,16 @@ export class TaskManager {
       type: TaskType.ADD_VOCALS,
       input: {
         audioUrl: request.audioUrl,
-        prompt: request.prompt
+        prompt: request.prompt,
+        title: request.title,
+        style: request.style,
+        negativeTags: request.negativeTags || '',
+        model: request.model || 'V4_5PLUS',
+        // 可选高级参数
+        ...(request.vocalGender && { vocalGender: request.vocalGender }),
+        ...(typeof request.styleWeight === 'number' && { styleWeight: request.styleWeight }),
+        ...(typeof request.weirdnessConstraint === 'number' && { weirdnessConstraint: request.weirdnessConstraint }),
+        ...(typeof request.audioWeight === 'number' && { audioWeight: request.audioWeight }),
       },
       callbackUrl: request.callbackUrl,
       progress: 0,
@@ -435,11 +444,29 @@ export class TaskManager {
         progress: 20
       });
 
-      const params = {
+      const params: any = {
         audioUrl: task.input.audioUrl,
         prompt: task.input.prompt,
+        title: task.input.title,
+        style: task.input.style,
+        negativeTags: task.input.negativeTags || '',
+        model: task.input.model || 'V4_5PLUS',
         callBackUrl: `${process.env.CALLBACK_BASE_URL}/api/music/callback/vocals-internal/${taskId}`
       };
+
+      // 添加可选参数
+      if (task.input.vocalGender) {
+        params.vocalGender = task.input.vocalGender;
+      }
+      if (typeof task.input.styleWeight === 'number') {
+        params.styleWeight = task.input.styleWeight;
+      }
+      if (typeof task.input.weirdnessConstraint === 'number') {
+        params.weirdnessConstraint = task.input.weirdnessConstraint;
+      }
+      if (typeof task.input.audioWeight === 'number') {
+        params.audioWeight = task.input.audioWeight;
+      }
 
       const response = await this.sunoApi.addVocals(params);
 
@@ -496,7 +523,9 @@ export class TaskManager {
               metadata: {
                 type: 'vocals',
                 prompt: task.input.prompt || '',
-                audioUrl: task.input.audioUrl || ''
+                audioUrl: task.input.audioUrl || '',
+                title: task.input.title || '',
+                style: task.input.style || ''
               }
             });
           }

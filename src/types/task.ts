@@ -73,9 +73,17 @@ export interface GenerateLyricsRequest {
  * 添加人声请求
  */
 export interface AddVocalsRequest {
-  audioUrl: string;              // 伴奏音频URL
-  prompt: string;                // 人声描述
+  audioUrl: string;              // 伴奏音频URL（对应 Suno API 的 uploadUrl）
+  prompt: string;                // 人声描述/歌词
+  title: string;                 // 歌曲标题（必填，最多80字符）
+  style: string;                 // 音乐风格（必填）
   callbackUrl: string;           // 回调URL（必填）
+  negativeTags?: string;         // 排除的风格标签
+  vocalGender?: 'm' | 'f';       // 人声性别 m=男, f=女
+  styleWeight?: number;          // 风格权重 0.00-1.00
+  weirdnessConstraint?: number;  // 创意发散度 0.00-1.00
+  audioWeight?: number;          // 音频影响力权重 0.00-1.00
+  model?: string;                // 模型版本: V4_5PLUS, V5
 }
 
 /**

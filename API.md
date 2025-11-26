@@ -187,11 +187,26 @@ curl -X POST "http://47.252.36.81:3001/api/music/generate" \
 
 ### 请求参数
 
+#### 必填参数
+
 | 参数名 | 类型 | 必填 | 说明 | 示例值 |
 |--------|------|------|------|--------|
-| audioUrl | string | 是 | 原始音频文件URL | "https://example.com/audio.mp3" |
-| prompt | string | 是 | 人声描述或歌词 | "温柔的女声演唱" |
+| audioUrl | string | 是 | 原始音频文件URL（公网可访问） | "https://example.com/audio.mp3" |
+| prompt | string | 是 | 人声描述或歌词内容 | "温柔的女声演唱" |
+| title | string | 是 | 歌曲标题（最多80字符） | "夏日海边" |
+| style | string | 是 | 音乐风格 | "Pop, Soft, Ballad" |
 | callbackUrl | string | 是 | 任务完成后的回调地址 | "http://your-server.com/callback" |
+
+#### 可选参数
+
+| 参数名 | 类型 | 必填 | 说明 | 示例值 |
+|--------|------|------|------|--------|
+| negativeTags | string | 否 | 排除的风格标签 | "Heavy Metal, Screaming" |
+| vocalGender | string | 否 | 人声性别: "m"=男, "f"=女 | "f" |
+| model | string | 否 | 模型版本: V4_5PLUS, V5 | "V4_5PLUS" |
+| styleWeight | number | 否 | 风格权重 0.00-1.00 | 0.65 |
+| weirdnessConstraint | number | 否 | 创意发散度 0.00-1.00 | 0.65 |
+| audioWeight | number | 否 | 音频影响力权重 0.00-1.00 | 0.65 |
 
 ### 请求示例
 
@@ -199,8 +214,27 @@ curl -X POST "http://47.252.36.81:3001/api/music/generate" \
 {
   "audioUrl": "https://cdn.sunoapi.org/audio/12345.mp3",
   "prompt": "用温柔的女声演唱这首歌",
-  "callbackUrl": "http://your-server.com/api/vocals/callback"
+  "title": "夏日海边",
+  "style": "Pop, Soft, Ballad",
+  "callbackUrl": "http://your-server.com/api/vocals/callback",
+  "vocalGender": "f",
+  "model": "V4_5PLUS"
 }
+```
+
+### curl 示例
+
+```bash
+curl -X POST "http://47.252.36.81:3001/api/music/add-vocals" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "audioUrl": "https://cdn.sunoapi.org/audio/12345.mp3",
+    "prompt": "用温柔的女声演唱这首歌",
+    "title": "夏日海边",
+    "style": "Pop, Soft, Ballad",
+    "callbackUrl": "http://your-server.com/api/vocals/callback",
+    "vocalGender": "f"
+  }'
 ```
 
 ### 响应示例
@@ -214,6 +248,14 @@ curl -X POST "http://47.252.36.81:3001/api/music/generate" \
     "status": "PENDING",
     "message": "任务已创建，正在处理中"
   }
+}
+```
+
+**参数错误 (400)**:
+```json
+{
+  "success": false,
+  "error": "title 参数必填（歌曲标题，最多80字符）"
 }
 ```
 

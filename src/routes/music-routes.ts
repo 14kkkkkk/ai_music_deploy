@@ -166,6 +166,7 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
     try {
       const request: AddVocalsRequest = req.body;
 
+      // 必填参数验证
       if (!request.audioUrl) {
         return res.status(400).json({
           success: false,
@@ -177,6 +178,20 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
         return res.status(400).json({
           success: false,
           error: 'prompt 参数必填'
+        });
+      }
+
+      if (!request.title) {
+        return res.status(400).json({
+          success: false,
+          error: 'title 参数必填（歌曲标题，最多80字符）'
+        });
+      }
+
+      if (!request.style) {
+        return res.status(400).json({
+          success: false,
+          error: 'style 参数必填（音乐风格，如: Jazz, Pop, Classical）'
         });
       }
 

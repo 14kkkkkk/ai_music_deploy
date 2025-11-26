@@ -81,19 +81,47 @@ export class SunoApiService {
 
   /**
    * 添加人声
+   * Suno API 使用 uploadUrl 而不是 audioUrl
    */
   async addVocals(params: any): Promise<any> {
     try {
-      logger.info('调用 Suno API /generate/add-vocals', { 
-        audioUrl: params.audioUrl?.substring(0, 50) 
+      // 构建 Suno API 请求参数，将 audioUrl 映射为 uploadUrl
+      const sunoParams: any = {
+        uploadUrl: params.audioUrl,  // Suno API 使用 uploadUrl
+        prompt: params.prompt,
+        title: params.title,
+        style: params.style,
+        negativeTags: params.negativeTags || '',
+        model: params.model || 'V4_5PLUS',
+        callBackUrl: params.callBackUrl,
+      };
+
+      // 添加可选参数
+      if (params.vocalGender) {
+        sunoParams.vocalGender = params.vocalGender;
+      }
+      if (typeof params.styleWeight === 'number') {
+        sunoParams.styleWeight = params.styleWeight;
+      }
+      if (typeof params.weirdnessConstraint === 'number') {
+        sunoParams.weirdnessConstraint = params.weirdnessConstraint;
+      }
+      if (typeof params.audioWeight === 'number') {
+        sunoParams.audioWeight = params.audioWeight;
+      }
+
+      logger.info('调用 Suno API /generate/add-vocals', {
+        uploadUrl: params.audioUrl?.substring(0, 50),
+        title: params.title,
+        style: params.style
       });
-      
-      const response = await this.client.post('/generate/add-vocals', params);
-      
-      logger.info('Suno API 响应成功', { 
-        taskId: response.data?.data?.taskId 
+
+      const response = await this.client.post('/generate/add-vocals', sunoParams);
+
+      logger.info('Suno API 响应成功', {
+        taskId: response.data?.data?.taskId
       });
-      
+
       return response.data;
     } catch (error: any) {
       logger.error('添加人声失败', {
