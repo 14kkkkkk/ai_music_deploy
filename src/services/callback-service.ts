@@ -3,7 +3,7 @@ import { logger } from '../utils/logger';
 import { CallbackPayload } from '../types/task';
 
 /**
- * 回调服务 - 负责通知后端任务完成
+ * Callback Service - Notify backend when task is completed
  */
 export class CallbackService {
   private callbackTimeout: number;
@@ -11,21 +11,21 @@ export class CallbackService {
   constructor() {
     this.callbackTimeout = parseInt(process.env.CALLBACK_TIMEOUT || '60000', 10);
 
-    logger.info('Callback Service 初始化完成', {
+    logger.info('Callback Service initialized', {
       timeout: `${this.callbackTimeout}ms`
     });
   }
 
   /**
-   * 通知后端任务完成
+   * Notify backend when task is completed
    */
   async notifyBackend(callbackUrl: string, payload: CallbackPayload): Promise<void> {
     if (!callbackUrl) {
-      logger.warn('回调URL为空，跳过回调');
+      logger.warn('Callback URL is empty, skipping callback');
       return;
     }
 
-    logger.info('开始回调后端', {
+    logger.info('Start callback to backend', {
       url: callbackUrl,
       taskId: payload.taskId,
       status: payload.status,
@@ -34,8 +34,8 @@ export class CallbackService {
       hasMetadata: !!payload.metadata
     });
 
-    // 打印完整回调内容用于调试
-    logger.info('AI音乐算法中台处理中台的回调信息', payload);
+    // Print full callback content for debugging
+    logger.info('AI Music callback payload', payload);
 
     try {
       const startTime = Date.now();
@@ -48,20 +48,20 @@ export class CallbackService {
       });
       const duration = Date.now() - startTime;
 
-      logger.info('回调后端成功', {
+      logger.info('Callback to backend success', {
         taskId: payload.taskId,
         statusCode: response.status,
         duration: `${duration}ms`
       });
 
     } catch (error: any) {
-      logger.error('回调后端失败', {
+      logger.error('Callback to backend failed', {
         taskId: payload.taskId,
         error: error.message,
         code: error.code,
         statusCode: error.response?.status
       });
-      // 回调失败不影响任务状态，只记录日志
+      // Callback failure does not affect task status, only log
     }
   }
 }

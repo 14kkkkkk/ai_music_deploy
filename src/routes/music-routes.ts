@@ -33,14 +33,14 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
       if (typeof request.customMode !== 'boolean') {
         return res.status(400).json({
           success: false,
-          error: 'customMode 参数必填（boolean 类型）'
+          error: 'customMode is required (boolean type)'
         });
       }
 
       if (typeof request.instrumental !== 'boolean') {
         return res.status(400).json({
           success: false,
-          error: 'instrumental 参数必填（boolean 类型）'
+          error: 'instrumental is required (boolean type)'
         });
       }
 
@@ -48,14 +48,14 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
       if (!request.model || !validModels.includes(request.model)) {
         return res.status(400).json({
           success: false,
-          error: `model 参数必填，可选值: ${validModels.join(', ')}`
+          error: `model is required, valid values: ${validModels.join(', ')}`
         });
       }
 
       if (!request.callbackUrl) {
         return res.status(400).json({
           success: false,
-          error: 'callbackUrl 参数必填'
+          error: 'callbackUrl is required'
         });
       }
 
@@ -65,20 +65,20 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
         if (!request.style) {
           return res.status(400).json({
             success: false,
-            error: '自定义模式下 style 参数必填'
+            error: 'style is required in custom mode'
           });
         }
         if (!request.title) {
           return res.status(400).json({
             success: false,
-            error: '自定义模式下 title 参数必填'
+            error: 'title is required in custom mode'
           });
         }
         // 自定义模式下，如果不是纯音乐，prompt 必填（作为歌词）
         if (!request.instrumental && !request.prompt) {
           return res.status(400).json({
             success: false,
-            error: '自定义模式下非纯音乐时 prompt 参数必填（作为歌词使用）'
+            error: 'prompt is required in custom mode for non-instrumental music (used as lyrics)'
           });
         }
         // 如果有上传音乐参考，验证 referenceType 和 audioUrl
@@ -87,13 +87,13 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
           if (!validReferenceTypes.includes(request.referenceType)) {
             return res.status(400).json({
               success: false,
-              error: `referenceType 参数无效，可选值: ${validReferenceTypes.join(', ')}`
+              error: `Invalid referenceType, valid values: ${validReferenceTypes.join(', ')}`
             });
           }
           if (!request.audioUrl) {
             return res.status(400).json({
               success: false,
-              error: '使用上传音乐参考时 audioUrl 参数必填'
+              error: 'audioUrl is required when using music reference'
             });
           }
         }
@@ -102,7 +102,7 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
         if (!request.prompt) {
           return res.status(400).json({
             success: false,
-            error: '非自定义模式下 prompt 参数必填'
+            error: 'prompt is required in non-custom mode'
           });
         }
       }
@@ -110,19 +110,19 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
       // 创建任务
       const task = await taskManager.createMusicGenerationTask(request);
 
-      logger.info('音乐生成任务已创建', { taskId: task.id });
+      logger.info('Music generation task created', { taskId: task.id });
 
       return res.json({
         success: true,
         data: {
           taskId: task.id,
           status: task.status,
-          message: '任务已创建，正在处理中'
+          message: 'Task created, processing'
         }
       });
 
     } catch (error: any) {
-      logger.error('创建音乐生成任务失败', { error: error.message });
+      logger.error('Failed to create music generation task', { error: error.message });
       return res.status(500).json({
         success: false,
         error: error.message
@@ -141,32 +141,32 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
       if (!request.prompt) {
         return res.status(400).json({
           success: false,
-          error: 'prompt 参数必填'
+          error: 'prompt is required'
         });
       }
 
       if (!request.callbackUrl) {
         return res.status(400).json({
           success: false,
-          error: 'callbackUrl 参数必填'
+          error: 'callbackUrl is required'
         });
       }
 
       const task = await taskManager.createLyricsGenerationTask(request);
 
-      logger.info('歌词生成任务已创建', { taskId: task.id });
+      logger.info('Lyrics generation task created', { taskId: task.id });
 
       return res.json({
         success: true,
         data: {
           taskId: task.id,
           status: task.status,
-          message: '任务已创建，正在处理中'
+          message: 'Task created, processing'
         }
       });
 
     } catch (error: any) {
-      logger.error('创建歌词生成任务失败', { error: error.message });
+      logger.error('Failed to create lyrics generation task', { error: error.message });
       return res.status(500).json({
         success: false,
         error: error.message
@@ -186,53 +186,53 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
       if (!request.audioUrl) {
         return res.status(400).json({
           success: false,
-          error: 'audioUrl 参数必填'
+          error: 'audioUrl is required'
         });
       }
 
       if (!request.prompt) {
         return res.status(400).json({
           success: false,
-          error: 'prompt 参数必填'
+          error: 'prompt is required'
         });
       }
 
       if (!request.title) {
         return res.status(400).json({
           success: false,
-          error: 'title 参数必填（歌曲标题，最多80字符）'
+          error: 'title is required (song title, max 80 characters)'
         });
       }
 
       if (!request.style) {
         return res.status(400).json({
           success: false,
-          error: 'style 参数必填（音乐风格，如: Jazz, Pop, Classical）'
+          error: 'style is required (music style, e.g.: Jazz, Pop, Classical)'
         });
       }
 
       if (!request.callbackUrl) {
         return res.status(400).json({
           success: false,
-          error: 'callbackUrl 参数必填'
+          error: 'callbackUrl is required'
         });
       }
 
       const task = await taskManager.createAddVocalsTask(request);
 
-      logger.info('添加人声任务已创建', { taskId: task.id });
+      logger.info('Add vocals task created', { taskId: task.id });
 
       return res.json({
         success: true,
         data: {
           taskId: task.id,
           status: task.status,
-          message: '任务已创建，正在处理中'
+          message: 'Task created, processing'
         }
       });
 
     } catch (error: any) {
-      logger.error('创建添加人声任务失败', { error: error.message });
+      logger.error('Failed to create add vocals task', { error: error.message });
       return res.status(500).json({
         success: false,
         error: error.message
@@ -252,53 +252,53 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
       if (!request.audioUrl) {
         return res.status(400).json({
           success: false,
-          error: 'audioUrl 参数必填'
+          error: 'audioUrl is required'
         });
       }
 
       if (!request.prompt) {
         return res.status(400).json({
           success: false,
-          error: 'prompt 参数必填'
+          error: 'prompt is required'
         });
       }
 
       if (!request.title) {
         return res.status(400).json({
           success: false,
-          error: 'title 参数必填（歌曲标题，最多80字符）'
+          error: 'title is required (song title, max 80 characters)'
         });
       }
 
       if (!request.style) {
         return res.status(400).json({
           success: false,
-          error: 'style 参数必填（音乐风格，如: Jazz, Pop, Classical）'
+          error: 'style is required (music style, e.g.: Jazz, Pop, Classical)'
         });
       }
 
       if (!request.callbackUrl) {
         return res.status(400).json({
           success: false,
-          error: 'callbackUrl 参数必填'
+          error: 'callbackUrl is required'
         });
       }
 
       const task = await taskManager.createAddInstrumentalTask(request);
 
-      logger.info('添加伴奏任务已创建', { taskId: task.id });
+      logger.info('Add instrumental task created', { taskId: task.id });
 
       return res.json({
         success: true,
         data: {
           taskId: task.id,
           status: task.status,
-          message: '任务已创建，正在处理中'
+          message: 'Task created, processing'
         }
       });
 
     } catch (error: any) {
-      logger.error('创建添加伴奏任务失败', { error: error.message });
+      logger.error('Failed to create add instrumental task', { error: error.message });
       return res.status(500).json({
         success: false,
         error: error.message
@@ -318,7 +318,7 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
       if (!task) {
         return res.status(404).json({
           success: false,
-          error: '任务不存在'
+          error: 'Task not found'
         });
       }
 
@@ -328,7 +328,7 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
       });
 
     } catch (error: any) {
-      logger.error('查询任务失败', { error: error.message });
+      logger.error('Failed to query task', { error: error.message });
       return res.status(500).json({
         success: false,
         error: error.message
@@ -348,7 +348,7 @@ export function createMusicRoutes(taskManager: TaskManager): Router {
         data: stats
       });
     } catch (error: any) {
-      logger.error('获取统计信息失败', { error: error.message });
+      logger.error('Failed to get stats', { error: error.message });
       return res.status(500).json({
         success: false,
         error: error.message

@@ -28,9 +28,9 @@ export class TaskManager {
     this.ossService = new OSSService();
     this.callbackService = new CallbackService();
 
-    logger.info('TaskManager 初始化完成', {
+    logger.info('TaskManager initialized', {
       concurrency: this.queue.concurrency,
-      timeout: '10分钟'
+      timeout: '10min'
     });
 
     // 定期清理已完成的任务（5分钟后删除）
@@ -44,7 +44,7 @@ export class TaskManager {
     // 检查队列是否已满
     const maxQueueSize = parseInt(process.env.MAX_QUEUE_SIZE || '2500');
     if (this.queue.size + this.queue.pending >= maxQueueSize) {
-      throw new Error(`队列已满，当前任务数: ${this.queue.size + this.queue.pending}`);
+      throw new Error(`Queue is full, current tasks: ${this.queue.size + this.queue.pending}`);
     }
 
     const task: Task = {
@@ -77,11 +77,11 @@ export class TaskManager {
 
     this.tasks.set(task.id, task);
     this.queue.add(() => this.processMusicGenerationTask(task.id)).catch((error: any) => {
-      logger.error('音乐生成任务队列异常', { taskId: task.id, error: error.message });
+      logger.error('Music generation task queue error', { taskId: task.id, error: error.message });
       this.handleTaskError(task.id, error, 'MUSIC_GENERATION');
     });
 
-    logger.info('音乐生成任务已创建', {
+    logger.info('Music generation task created', {
       taskId: task.id,
       queueSize: this.queue.size,
       queuePending: this.queue.pending
@@ -96,7 +96,7 @@ export class TaskManager {
   async createLyricsGenerationTask(request: GenerateLyricsRequest): Promise<Task> {
     const maxQueueSize = parseInt(process.env.MAX_QUEUE_SIZE || '2500');
     if (this.queue.size + this.queue.pending >= maxQueueSize) {
-      throw new Error(`队列已满，当前任务数: ${this.queue.size + this.queue.pending}`);
+      throw new Error(`Queue is full, current tasks: ${this.queue.size + this.queue.pending}`);
     }
 
     const task: Task = {
@@ -114,11 +114,11 @@ export class TaskManager {
 
     this.tasks.set(task.id, task);
     this.queue.add(() => this.processLyricsGenerationTask(task.id)).catch((error: any) => {
-      logger.error('歌词生成任务队列异常', { taskId: task.id, error: error.message });
+      logger.error('Lyrics generation task queue error', { taskId: task.id, error: error.message });
       this.handleTaskError(task.id, error, 'LYRICS_GENERATION');
     });
 
-    logger.info('歌词生成任务已创建', {
+    logger.info('Lyrics generation task created', {
       taskId: task.id,
       queueSize: this.queue.size
     });
@@ -132,7 +132,7 @@ export class TaskManager {
   async createAddVocalsTask(request: AddVocalsRequest): Promise<Task> {
     const maxQueueSize = parseInt(process.env.MAX_QUEUE_SIZE || '2500');
     if (this.queue.size + this.queue.pending >= maxQueueSize) {
-      throw new Error(`队列已满，当前任务数: ${this.queue.size + this.queue.pending}`);
+      throw new Error(`Queue is full, current tasks: ${this.queue.size + this.queue.pending}`);
     }
 
     const task: Task = {
@@ -160,11 +160,11 @@ export class TaskManager {
 
     this.tasks.set(task.id, task);
     this.queue.add(() => this.processAddVocalsTask(task.id)).catch((error: any) => {
-      logger.error('添加人声任务队列异常', { taskId: task.id, error: error.message });
+      logger.error('Add vocals task queue error', { taskId: task.id, error: error.message });
       this.handleTaskError(task.id, error, 'ADD_VOCALS');
     });
 
-    logger.info('添加人声任务已创建', {
+    logger.info('Add vocals task created', {
       taskId: task.id,
       queueSize: this.queue.size
     });
@@ -178,7 +178,7 @@ export class TaskManager {
   async createAddInstrumentalTask(request: AddInstrumentalRequest): Promise<Task> {
     const maxQueueSize = parseInt(process.env.MAX_QUEUE_SIZE || '2500');
     if (this.queue.size + this.queue.pending >= maxQueueSize) {
-      throw new Error(`队列已满，当前任务数: ${this.queue.size + this.queue.pending}`);
+      throw new Error(`Queue is full, current tasks: ${this.queue.size + this.queue.pending}`);
     }
 
     const task: Task = {
@@ -205,11 +205,11 @@ export class TaskManager {
 
     this.tasks.set(task.id, task);
     this.queue.add(() => this.processAddInstrumentalTask(task.id)).catch((error: any) => {
-      logger.error('添加伴奏任务队列异常', { taskId: task.id, error: error.message });
+      logger.error('Add instrumental task queue error', { taskId: task.id, error: error.message });
       this.handleTaskError(task.id, error, 'ADD_INSTRUMENTAL');
     });
 
-    logger.info('添加伴奏任务已创建', {
+    logger.info('Add instrumental task created', {
       taskId: task.id,
       queueSize: this.queue.size
     });
@@ -257,7 +257,7 @@ export class TaskManager {
   private async processMusicGenerationTask(taskId: string): Promise<void> {
     const task = this.tasks.get(taskId);
     if (!task) {
-      logger.error('任务不存在', { taskId });
+      logger.error('Task not found', { taskId });
       return;
     }
 
@@ -270,7 +270,7 @@ export class TaskManager {
         progress: 10
       });
 
-      logger.info('开始处理音乐生成任务', {
+      logger.info('Processing music generation task', {
         taskId,
         referenceType: task.input.referenceType || 'none'
       });
@@ -329,19 +329,19 @@ export class TaskManager {
       }
 
       if (response.code !== 200 || !response.data?.taskId) {
-        throw new Error(response.msg || '调用Suno API失败');
+        throw new Error(response.msg || 'Suno API call failed');
       }
 
       sunoTaskId = response.data.taskId;
       this.updateTask(taskId, { progress: 30 });
 
       // 3. 轮询等待任务完成
-      logger.info('开始轮询任务状态', { taskId, sunoTaskId });
+      logger.info('Start polling task status', { taskId, sunoTaskId });
       const result = await this.pollTaskUntilComplete(sunoTaskId);
 
       this.updateTask(taskId, { progress: 70 });
 
-      logger.info('音乐轮询结果', {
+      logger.info('Music polling result', {
         taskId,
         resultKeys: Object.keys(result || {}),
         hasResponse: !!result?.response,
@@ -357,7 +357,7 @@ export class TaskManager {
       // 尝试从 response 字段获取数据
       let responseData = result?.response;
 
-      logger.info('音乐原始 response 数据', {
+      logger.info('Music raw response data', {
         taskId,
         responseDataType: typeof responseData,
         responseDataPreview: typeof responseData === 'string'
@@ -368,9 +368,9 @@ export class TaskManager {
       if (typeof responseData === 'string') {
         try {
           responseData = JSON.parse(responseData);
-          logger.info('解析 response 字符串成功', { taskId });
+          logger.info('Parse response string success', { taskId });
         } catch (e) {
-          logger.warn('解析 response 字符串失败', { taskId });
+          logger.warn('Parse response string failed', { taskId });
         }
       }
 
@@ -381,24 +381,24 @@ export class TaskManager {
       // 4. {taskId: ..., sunoData: [...]}  ← Suno API 实际返回的格式
       if (Array.isArray(responseData)) {
         audioList = responseData;
-        logger.info('音乐数据来自 responseData 数组', { taskId });
+        logger.info('Music data from responseData array', { taskId });
       } else if (responseData?.sunoData && Array.isArray(responseData.sunoData)) {
         // Suno API 返回的实际格式：{taskId, sunoData: [...]}
         audioList = responseData.sunoData;
-        logger.info('音乐数据来自 responseData.sunoData', { taskId });
+        logger.info('Music data from responseData.sunoData', { taskId });
       } else if (responseData?.data && Array.isArray(responseData.data)) {
         audioList = responseData.data;
-        logger.info('音乐数据来自 responseData.data', { taskId });
+        logger.info('Music data from responseData.data', { taskId });
       } else if (Array.isArray(result?.data)) {
         // 兼容其他格式：result.data 直接是数组
         audioList = result.data;
-        logger.info('音乐数据来自 result.data', { taskId });
+        logger.info('Music data from result.data', { taskId });
       } else if (result?.data?.data && Array.isArray(result.data.data)) {
         // 兼容其他格式：result.data.data 是数组
         audioList = result.data.data;
-        logger.info('音乐数据来自 result.data.data', { taskId });
+        logger.info('Music data from result.data.data', { taskId });
       } else {
-        logger.warn('未找到音乐数组数据', {
+        logger.warn('Music array data not found', {
           taskId,
           responseDataIsArray: Array.isArray(responseData),
           responseDataKeys: responseData ? Object.keys(responseData) : [],
@@ -408,7 +408,7 @@ export class TaskManager {
         });
       }
 
-      logger.info('解析后的音乐数据', {
+      logger.info('Parsed music data', {
         taskId,
         hasData: !!audioList,
         dataLength: audioList?.length,
@@ -434,7 +434,7 @@ export class TaskManager {
 
         if (audioData.audio_url) {
           // 下载音频文件并上传到 OSS
-          logger.info('开始上传音频到 OSS', { taskId, audioUrl: audioData.audio_url });
+          logger.info('Start uploading audio to OSS', { taskId, audioUrl: audioData.audio_url });
           const ossFileName = await this.ossService.downloadAndUploadToOSS(audioData.audio_url);
 
           this.updateTask(taskId, {
@@ -448,7 +448,7 @@ export class TaskManager {
             completedAt: new Date()
           });
 
-          logger.info('音乐生成任务完成', { taskId, ossFileName });
+          logger.info('Music generation task completed', { taskId, ossFileName });
 
           // 5. 回调通知后端
           if (task.callbackUrl) {
@@ -479,14 +479,14 @@ export class TaskManager {
             });
           }
         } else {
-          throw new Error('音频URL不存在');
+          throw new Error('Audio URL not found');
         }
       } else {
-        throw new Error('未获取到音频数据');
+        throw new Error('Failed to get audio data');
       }
 
     } catch (error: any) {
-      logger.error('音乐生成任务失败', {
+      logger.error('Music generation task failed', {
         taskId,
         error: error.message
       });
@@ -541,7 +541,7 @@ export class TaskManager {
       const response = await this.sunoApi.generateLyrics(params);
 
       if (response.code !== 200 || !response.data?.taskId) {
-        throw new Error(response.msg || '调用Suno API失败');
+        throw new Error(response.msg || 'Suno API call failed');
       }
 
       const sunoTaskId = response.data.taskId;
@@ -550,7 +550,7 @@ export class TaskManager {
       // 轮询等待歌词任务完成
       const result = await this.pollLyricsTaskUntilComplete(sunoTaskId);
 
-      logger.info('歌词轮询结果', {
+      logger.info('Lyrics polling result', {
         taskId,
         resultKeys: Object.keys(result || {}),
         hasResponse: !!result?.response,
@@ -564,7 +564,7 @@ export class TaskManager {
 
       // 尝试从 response 字段获取数据
       let responseData = result?.response;
-      logger.info('歌词原始 response 数据', {
+      logger.info('Lyrics raw response data', {
         taskId,
         responseDataType: typeof responseData,
         responseDataPreview: typeof responseData === 'string'
@@ -575,25 +575,25 @@ export class TaskManager {
       if (typeof responseData === 'string') {
         try {
           responseData = JSON.parse(responseData);
-          logger.info('解析 response 字符串成功', { taskId });
+          logger.info('Parse response string success', { taskId });
         } catch (e) {
-          logger.warn('解析 response 字符串失败', { taskId, response: responseData?.substring(0, 100) });
+          logger.warn('Parse response string failed', { taskId, response: responseData?.substring(0, 100) });
         }
       }
 
       // response 可能是 {data: [...]} 或直接是数组
       if (Array.isArray(responseData)) {
         lyricsData = responseData;
-        logger.info('歌词数据来自 responseData 数组', { taskId });
+        logger.info('Lyrics data from responseData array', { taskId });
       } else if (responseData?.data && Array.isArray(responseData.data)) {
         lyricsData = responseData.data;
-        logger.info('歌词数据来自 responseData.data', { taskId });
+        logger.info('Lyrics data from responseData.data', { taskId });
       } else if (result?.data && Array.isArray(result.data)) {
         // 兼容其他格式
         lyricsData = result.data;
-        logger.info('歌词数据来自 result.data', { taskId });
+        logger.info('Lyrics data from result.data', { taskId });
       } else {
-        logger.warn('未找到歌词数组数据', {
+        logger.warn('Lyrics array data not found', {
           taskId,
           responseDataIsArray: Array.isArray(responseData),
           responseDataHasData: !!responseData?.data,
@@ -601,7 +601,7 @@ export class TaskManager {
         });
       }
 
-      logger.info('解析后的歌词数据', {
+      logger.info('Parsed lyrics data', {
         taskId,
         lyricsCount: lyricsData.length,
         firstItem: lyricsData[0] ? { text: lyricsData[0].text?.substring(0, 50), title: lyricsData[0].title } : null
@@ -622,7 +622,7 @@ export class TaskManager {
         completedAt: new Date()
       });
 
-      logger.info('歌词生成任务完成', { taskId });
+      logger.info('Lyrics generation task completed', { taskId });
 
       // 回调通知后端
       if (task.callbackUrl) {
@@ -644,7 +644,7 @@ export class TaskManager {
       }
 
     } catch (error: any) {
-      logger.error('歌词生成任务失败', {
+      logger.error('Lyrics generation task failed', {
         taskId,
         error: error.message
       });
@@ -710,7 +710,7 @@ export class TaskManager {
       const response = await this.sunoApi.addVocals(params);
 
       if (response.code !== 200 || !response.data?.taskId) {
-        throw new Error(response.msg || '调用Suno API失败');
+        throw new Error(response.msg || 'Suno API call failed');
       }
 
       const sunoTaskId = response.data.taskId;
@@ -720,7 +720,7 @@ export class TaskManager {
       const result = await this.pollTaskUntilComplete(sunoTaskId);
       this.updateTask(taskId, { progress: 70 });
 
-      logger.info('添加人声轮询结果', {
+      logger.info('Add vocals polling result', {
         taskId,
         resultKeys: Object.keys(result || {}),
         hasResponse: !!result?.response
@@ -735,7 +735,7 @@ export class TaskManager {
         try {
           responseData = JSON.parse(responseData);
         } catch (e) {
-          logger.warn('解析 response 字符串失败', { taskId });
+          logger.warn('Parse response string failed', { taskId });
         }
       }
 
@@ -752,7 +752,7 @@ export class TaskManager {
         audioList = result.data.data;
       }
 
-      logger.info('解析后的人声数据', {
+      logger.info('Parsed vocals data', {
         taskId,
         hasData: !!audioList,
         dataLength: audioList?.length
@@ -773,7 +773,7 @@ export class TaskManager {
 
         if (audioData.audio_url) {
           // 下载音频文件并上传到 OSS
-          logger.info('开始上传音频到 OSS', { taskId, audioUrl: audioData.audio_url });
+          logger.info('Start uploading audio to OSS', { taskId, audioUrl: audioData.audio_url });
           const ossFileName = await this.ossService.downloadAndUploadToOSS(audioData.audio_url);
 
           this.updateTask(taskId, {
@@ -787,7 +787,7 @@ export class TaskManager {
             completedAt: new Date()
           });
 
-          logger.info('添加人声任务完成', { taskId, ossFileName });
+          logger.info('Add vocals task completed', { taskId, ossFileName });
 
           if (task.callbackUrl) {
             const vocalsResult = {
@@ -813,14 +813,14 @@ export class TaskManager {
             });
           }
         } else {
-          throw new Error('音频URL不存在');
+          throw new Error('Audio URL not found');
         }
       } else {
-        throw new Error('未获取到音频数据');
+        throw new Error('Failed to get audio data');
       }
 
     } catch (error: any) {
-      logger.error('添加人声任务失败', {
+      logger.error('Add vocals task failed', {
         taskId,
         error: error.message
       });
@@ -886,7 +886,7 @@ export class TaskManager {
       const response = await this.sunoApi.addInstrumental(params);
 
       if (response.code !== 200 || !response.data?.taskId) {
-        throw new Error(response.msg || '调用Suno API失败');
+        throw new Error(response.msg || 'Suno API call failed');
       }
 
       const sunoTaskId = response.data.taskId;
@@ -896,7 +896,7 @@ export class TaskManager {
       const result = await this.pollTaskUntilComplete(sunoTaskId);
       this.updateTask(taskId, { progress: 70 });
 
-      logger.info('添加伴奏轮询结果', {
+      logger.info('Add instrumental polling result', {
         taskId,
         resultKeys: Object.keys(result || {}),
         hasResponse: !!result?.response
@@ -910,7 +910,7 @@ export class TaskManager {
         try {
           responseData = JSON.parse(responseData);
         } catch (e) {
-          logger.warn('解析 response 字符串失败', { taskId });
+          logger.warn('Parse response string failed', { taskId });
         }
       }
 
@@ -927,7 +927,7 @@ export class TaskManager {
         audioList = result.data.data;
       }
 
-      logger.info('解析后的伴奏数据', {
+      logger.info('Parsed instrumental data', {
         taskId,
         hasData: !!audioList,
         dataLength: audioList?.length
@@ -948,7 +948,7 @@ export class TaskManager {
 
         if (audioData.audio_url) {
           // 下载音频文件并上传到 OSS
-          logger.info('开始上传音频到 OSS', { taskId, audioUrl: audioData.audio_url });
+          logger.info('Start uploading audio to OSS', { taskId, audioUrl: audioData.audio_url });
           const ossFileName = await this.ossService.downloadAndUploadToOSS(audioData.audio_url);
 
           this.updateTask(taskId, {
@@ -962,7 +962,7 @@ export class TaskManager {
             completedAt: new Date()
           });
 
-          logger.info('添加伴奏任务完成', { taskId, ossFileName });
+          logger.info('Add instrumental task completed', { taskId, ossFileName });
 
           // 回调通知后端
           if (task.callbackUrl) {
@@ -989,14 +989,14 @@ export class TaskManager {
             });
           }
         } else {
-          throw new Error('音频URL不存在');
+          throw new Error('Audio URL not found');
         }
       } else {
-        throw new Error('未获取到音频数据');
+        throw new Error('Failed to get audio data');
       }
 
     } catch (error: any) {
-      logger.error('添加伴奏任务失败', {
+      logger.error('Add instrumental task failed', {
         taskId,
         error: error.message
       });
@@ -1040,14 +1040,14 @@ export class TaskManager {
           const status = result.data.status;
 
           if (status === 'SUCCESS') {
-            logger.info('Suno音乐任务完成', { sunoTaskId });
+            logger.info('Suno music task completed', { sunoTaskId });
             return result.data;
           } else if (status === 'FAILED') {
-            throw new Error('Suno任务失败');
+            throw new Error('Suno task failed');
           }
 
           // 继续轮询
-          logger.info('Suno音乐任务处理中', {
+          logger.info('Suno music task processing', {
             sunoTaskId,
             status,
             attempt: `${attempt}/${maxAttempts}`
@@ -1059,12 +1059,12 @@ export class TaskManager {
         if (attempt === maxAttempts) {
           throw error;
         }
-        logger.warn('查询音乐任务状态失败，重试中', { sunoTaskId, attempt, error: error.message });
+        logger.warn('Query music task status failed, retrying', { sunoTaskId, attempt, error: error.message });
         await this.sleep(pollInterval);
       }
     }
 
-    throw new Error('任务超时');
+    throw new Error('Task timeout');
   }
 
   /**
@@ -1082,14 +1082,14 @@ export class TaskManager {
           const status = result.data.status;
 
           if (status === 'SUCCESS') {
-            logger.info('Suno歌词任务完成', { sunoTaskId });
+            logger.info('Suno lyrics task completed', { sunoTaskId });
             return result.data;
           } else if (status === 'FAILED') {
-            throw new Error('Suno歌词任务失败');
+            throw new Error('Suno lyrics task failed');
           }
 
           // 继续轮询
-          logger.info('Suno歌词任务处理中', {
+          logger.info('Suno lyrics task processing', {
             sunoTaskId,
             status,
             attempt: `${attempt}/${maxAttempts}`
@@ -1101,12 +1101,12 @@ export class TaskManager {
         if (attempt === maxAttempts) {
           throw error;
         }
-        logger.warn('查询歌词任务状态失败，重试中', { sunoTaskId, attempt, error: error.message });
+        logger.warn('Query lyrics task status failed, retrying', { sunoTaskId, attempt, error: error.message });
         await this.sleep(pollInterval);
       }
     }
 
-    throw new Error('歌词任务超时');
+    throw new Error('Lyrics task timeout');
   }
 
   /**
@@ -1129,7 +1129,7 @@ export class TaskManager {
     }
 
     if (cleanedCount > 0) {
-      logger.info('清理已完成任务', { cleanedCount, remainingTasks: this.tasks.size });
+      logger.info('Cleanup completed tasks', { cleanedCount, remainingTasks: this.tasks.size });
     }
   }
 
@@ -1147,7 +1147,7 @@ export class TaskManager {
     const task = this.tasks.get(taskId);
     if (!task) return;
 
-    const errorMessage = error.message || '任务执行失败';
+    const errorMessage = error.message || 'Task execution failed';
 
     this.updateTask(taskId, {
       status: TaskStatus.FAILED,
@@ -1191,7 +1191,7 @@ export class TaskManager {
           metadata
         });
       } catch (callbackError: any) {
-        logger.error('回调通知失败', {
+        logger.error('Callback notification failed', {
           taskId,
           error: callbackError.message
         });

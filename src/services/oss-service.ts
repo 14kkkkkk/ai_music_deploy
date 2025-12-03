@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { URL } from 'url';
 
 /**
- * OSS上传服务 - 负责文件上传到OSS
+ * OSS Upload Service - Upload files to OSS
  */
 export class OSSService {
   private signedUrlApi: string;
@@ -21,29 +21,29 @@ export class OSSService {
     this.uploadTimeout = parseInt(process.env.OSS_UPLOAD_TIMEOUT || '60000', 10);
     this.tempDir = process.env.TEMP_DIR || './temp_audio';
 
-    // 确保临时目录存在
+    // Ensure temp directory exists
     if (!fs.existsSync(this.tempDir)) {
       fs.mkdirSync(this.tempDir, { recursive: true });
     }
 
-    logger.info('OSS Service 初始化完成', {
+    logger.info('OSS Service initialized', {
       signedUrlApi: this.signedUrlApi,
       uploadTimeout: `${this.uploadTimeout}ms`
     });
   }
 
   /**
-   * 获取预签名上传URL
-   * 使用自定义 HTTPS 请求（无 SNI）来解决 ECONNRESET 问题
+   * Get presigned upload URL
+   * Use custom HTTPS request (no SNI) to solve ECONNRESET issue
    */
   private async getSignedUploadUrl(fileName: string): Promise<string> {
     try {
-      logger.info('请求签名上传URL', { fileName });
+      logger.info('Request signed upload URL', { fileName });
 
-      // 构造完整的 URL（使用 GET 请求 + 查询参数）
+      // Build full URL (use GET request + query params)
       const url = `${this.signedUrlApi}?fileName=${encodeURIComponent(fileName)}`;
 
-      // 使用无 SNI 的 HTTPS 请求
+      // Use HTTPS request without SNI
       const response = await httpsRequestNoSNI(url, {
         method: 'GET',
         headers: {
@@ -52,34 +52,34 @@ export class OSSService {
         timeout: 10000
       });
 
-      // 检查状态码
+      // Check status code
       if (response.statusCode !== 200) {
         throw new Error(`HTTP ${response.statusCode}: ${response.body}`);
       }
 
-      // 获取签名 URL
+      // Get signed URL
       const signedUrl = response.json?.signedUrl;
 
       if (!signedUrl) {
-        throw new Error('签名URL响应中缺少signedUrl字段');
+        throw new Error('Missing signedUrl field in response');
       }
 
-      logger.info('获取签名URL成功', { fileName, signedUrl: signedUrl.substring(0, 50) + '...' });
+      logger.info('Get signed URL success', { fileName, signedUrl: signedUrl.substring(0, 50) + '...' });
       return signedUrl;
 
     } catch (error: any) {
-      logger.error('获取签名URL失败', { fileName, error: error.message });
-      throw new Error(`获取签名URL失败: ${error.message}`);
+      logger.error('Get signed URL failed', { fileName, error: error.message });
+      throw new Error(`Get signed URL failed: ${error.message}`);
     }
   }
 
   /**
-   * 使用原生 https 模块上传文件到 OSS
+   * Upload file to OSS using native https module
    */
   private async uploadToOSS(signedUrl: string, filePath: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
       if (!fs.existsSync(filePath)) {
-        reject(new Error(`文件不存在: ${filePath}`));
+        reject(new Error(`File not found: ${filePath}`));
         return;
       }
 
@@ -100,7 +100,7 @@ export class OSSService {
         }
       };
 
-      logger.info('开始上传到 OSS', {
+      logger.info('Start uploading to OSS', {
         hostname: urlObj.hostname,
         sizeMB: (fileSize / 1024 / 1024).toFixed(2) + ' MB'
       });
@@ -110,17 +110,17 @@ export class OSSService {
         res.on('data', (chunk) => { responseData += chunk.toString(); });
         res.on('end', () => {
           if (res.statusCode === 200) {
-            logger.info('OSS 上传成功');
+            logger.info('OSS upload success');
             resolve(true);
           } else {
-            logger.error('OSS 上传失败', { statusCode: res.statusCode });
-            reject(new Error(`上传失败，状态码: ${res.statusCode}`));
+            logger.error('OSS upload failed', { statusCode: res.statusCode });
+            reject(new Error(`Upload failed, status code: ${res.statusCode}`));
           }
         });
       });
 
       req.on('error', (error) => {
-        logger.error('OSS 上传请求错误', { error: error.message });
+        logger.error('OSS upload request error', { error: error.message });
         reject(error);
       });
 
@@ -129,15 +129,15 @@ export class OSSService {
   }
 
   /**
-   * 从URL下载文件并上传到OSS
+   * Download file from URL and upload to OSS
    */
   async downloadAndUploadToOSS(audioUrl: string): Promise<string> {
     const fileExtension = path.extname(new URL(audioUrl).pathname) || '.mp3';
     const tempFilePath = path.join(this.tempDir, `temp_${Date.now()}${fileExtension}`);
 
     try {
-      // 1. 下载文件
-      logger.info('开始下载音频文件', { audioUrl: audioUrl.substring(0, 100) });
+      // 1. Download file
+      logger.info('Start downloading audio file', { audioUrl: audioUrl.substring(0, 100) });
       const response = await axios.get(audioUrl, {
         responseType: 'stream',
         timeout: this.uploadTimeout
@@ -152,29 +152,29 @@ export class OSSService {
       });
 
       const fileSize = fs.statSync(tempFilePath).size;
-      logger.info('音频文件下载完成', {
+      logger.info('Audio file download completed', {
         tempFilePath,
         size: fileSize,
         sizeMB: (fileSize / 1024 / 1024).toFixed(2) + ' MB'
       });
 
-      // 2. 生成唯一文件名
+      // 2. Generate unique file name
       const fileName = `${uuidv4()}${fileExtension}`;
-      logger.info('生成文件名', { fileName });
+      logger.info('Generated file name', { fileName });
 
-      // 3. 获取预签名URL
+      // 3. Get presigned URL
       const signedUrl = await this.getSignedUploadUrl(fileName);
 
-      // 4. 上传到OSS
+      // 4. Upload to OSS
       await this.uploadToOSS(signedUrl, tempFilePath);
 
-      logger.info('✅ 音频文件上传OSS成功', { fileName });
+      logger.info('Audio file uploaded to OSS successfully', { fileName });
       return fileName;
     } finally {
-      // 清理临时文件
+      // Clean up temp file
       if (fs.existsSync(tempFilePath)) {
         fs.unlinkSync(tempFilePath);
-        logger.info('临时文件已删除', { tempFilePath });
+        logger.info('Temp file deleted', { tempFilePath });
       }
     }
   }

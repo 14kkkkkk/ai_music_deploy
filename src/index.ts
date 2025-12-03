@@ -52,20 +52,16 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   const stats = taskManager.getStats();
   res.json({
-    service: 'AI 音乐生成服务',
+    service: 'AI Music Generation Service',
     version: '1.0.0',
-    description: '提供音乐生成、歌词创作、音频处理等功能',
+    description: 'Music generation, lyrics creation, audio processing',
     endpoints: {
-      // 音乐生成
       generateMusic: 'POST /api/music/generate',
       generateLyrics: 'POST /api/music/generate-lyrics',
-      // 音频处理
       addVocals: 'POST /api/music/add-vocals',
       addInstrumental: 'POST /api/music/add-instrumental',
-      // 任务查询
       getTask: 'GET /api/music/tasks/:taskId',
       getStats: 'GET /api/music/stats',
-      // 健康检查
       health: 'GET /health'
     },
     stats: {
@@ -89,30 +85,29 @@ app.get('/', (req, res) => {
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    error: '接口不存在',
+    error: 'Endpoint not found',
     path: req.path
   });
 });
 
 // 错误处理
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('服务器错误', { error: err.message, stack: err.stack });
+  logger.error('Server error', { error: err.message, stack: err.stack });
   res.status(500).json({
     success: false,
-    error: '服务器内部错误',
+    error: 'Internal server error',
     message: err.message
   });
 });
 
 // 启动服务（监听0.0.0.0，允许外网访问）
 app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`🎵 AI 音乐服务已启动`);
-  logger.info(`📍 本地访问: http://localhost:${PORT}`);
-  logger.info(`📍 外网访问: http://${process.env.SERVER_IP || '你的外网IP'}:${PORT}`);
-  logger.info(`📊 健康检查: http://localhost:${PORT}/health`);
-  logger.info(`🔧 环境: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`⚙️  任务管理器: 并发=${process.env.MAX_CONCURRENCY || '10'}, 队列=${process.env.MAX_QUEUE_SIZE || '2500'}`);
-  logger.info(`☁️  OSS上传: ${process.env.OSS_SIGNED_URL_API ? '已启用' : '未启用'}`);
-  logger.info(`⚠️  请确保防火墙已开放 ${PORT} 端口`);
+  logger.info(`AI Music Service started`);
+  logger.info(`Local: http://localhost:${PORT}`);
+  logger.info(`External: http://${process.env.SERVER_IP || 'YOUR_IP'}:${PORT}`);
+  logger.info(`Health check: http://localhost:${PORT}/health`);
+  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`Task manager: concurrency=${process.env.MAX_CONCURRENCY || '10'}, queue=${process.env.MAX_QUEUE_SIZE || '2500'}`);
+  logger.info(`OSS upload: ${process.env.OSS_SIGNED_URL_API ? 'enabled' : 'disabled'}`);
 });
 
